@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+/* Force readable input text (fix "typing but nothing appears") */
+input, textarea, select {
+  color: #0f172a;            /* slate-900 */
+  background-color: #ffffff; /* white */
+  caret-color: #0f172a;
+}
+
+::placeholder {
+  color: rgba(15, 23, 42, 0.45);
+}

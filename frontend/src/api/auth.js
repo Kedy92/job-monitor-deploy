@@ -1,22 +1,9 @@
 import { api } from "./client";
 
-export async function login(email, password) {
-  const data = await api.post("/auth/login", {
-    body: { email, password }, // object (no stringify)
-  });
-
-  localStorage.setItem("access_token", data.access_token);
-  return data;
+export function register(payload) {
+  return api.post("/auth/register", { body: payload });
 }
 
-export async function register(email, password) {
-  const data = await api.post("/auth/register", {
-    body: { email, password },
-  });
-
-  return data;
-}
-
-export function logout() {
-  localStorage.removeItem("access_token");
+export function login(payload) {
+  return api.post("/auth/login", { body: payload });
 }

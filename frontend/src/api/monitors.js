@@ -1,14 +1,17 @@
-// frontend/src/api/monitors.js
 import { api } from "./client";
 
-export function listMonitors(token) {
-  return api.get("/monitors", { token });
+export function getMonitors() {
+  return api.get("/monitors");
 }
 
-export function createMonitor(token, payload) {
-  return api.post("/monitors", { token, body: payload });
+export function createMonitor(payload) {
+  return api.post("/monitors", { body: payload });
 }
 
-export function deleteMonitor(token, id) {
-  return api.del(`/monitors/${id}`, { token });
+export function updateMonitor(id, payload) {
+  return api.put(`/monitors/${id}`, { body: payload });
+}
+
+export function deleteMonitor(id) {
+  return api.del(`/monitors/${id}`);
 }

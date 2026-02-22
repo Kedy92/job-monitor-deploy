@@ -30,3 +30,10 @@ class Monitor(Base):
     )
 
     user = relationship("User", back_populates="monitors")
+
+    runs = relationship(
+        "MonitorRun",
+        back_populates="monitor",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )

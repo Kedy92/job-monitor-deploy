@@ -1,5 +1,5 @@
-import { apiFetch } from "./client";
+import { api } from "./client";
 
 export function getMe() {
-  return apiFetch("/users/me");
+  return api.get("/users/me");
 }
