@@ -1,5 +1,8 @@
-from sqlalchemy.orm import DeclarativeBase
+from app.db.base_class import Base
 
+# Import ALL models here so Alembic can detect them properly
 
-class Base(DeclarativeBase):
-    pass
+from app.models.user import User
+from app.models.monitor import Monitor
+from app.models.monitor_run import MonitorRun
+from app.models.application import Application

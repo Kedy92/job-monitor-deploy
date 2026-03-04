@@ -78,5 +78,6 @@ export const api = {
   get: (path, opts) => request(path, { ...opts, method: "GET" }),
   post: (path, opts) => request(path, { ...opts, method: "POST" }),
   put: (path, opts) => request(path, { ...opts, method: "PUT" }),
+  patch: (path, opts) => request(path, { ...opts, method: "PATCH" }), // ✅ add this
   del: (path, opts) => request(path, { ...opts, method: "DELETE" }),
 };

@@ -6,11 +6,16 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.users import router as users_router
 from app.api.routes.monitors import router as monitors_router
 
+from app.routers.ai_tools import router as ai_router
+
 from app.routers.notifications_test import router as notifications_test_router
 
 from fastapi.middleware.cors import CORSMiddleware
 
+
 from contextlib import asynccontextmanager
+
+from app.api.routes.applications import router as applications_router
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -57,6 +62,8 @@ app = FastAPI(lifespan=lifespan)
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
 ]
 
 app.add_middleware(
@@ -73,6 +80,8 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(notifications_test_router)
+app.include_router(ai_router)
+app.include_router(applications_router)
 
 
 @app.get("/")

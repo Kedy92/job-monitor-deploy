@@ -5,9 +5,13 @@ import AppLayout from "../layouts/AppLayout";
 
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
+
 import DashboardPage from "../pages/DashboardPage";
+import AiToolsPage from "../pages/AiToolsPage";
+import ApplicationsPage from "../pages/ApplicationsPage";
 
 export const router = createBrowserRouter([
+  // Public auth routes
   {
     element: <AuthLayout />,
     children: [
@@ -16,6 +20,8 @@ export const router = createBrowserRouter([
       { path: "/register", element: <RegisterPage /> },
     ],
   },
+
+  // Protected app routes
   {
     path: "/app",
     element: (
@@ -23,10 +29,13 @@ export const router = createBrowserRouter([
         <AppLayout />
       </ProtectedRoute>
     ),
-    children: [{ index: true, element: <DashboardPage /> }],
+    children: [
+      { index: true, element: <DashboardPage /> },
+      { path: "ai-tools", element: <AiToolsPage /> },
+      { path: "applications", element: <ApplicationsPage /> },
+    ],
   },
-  {
-    path: "*",
-    element: <Navigate to="/" replace />,
-  },
+
+  // Fallback
+  { path: "*", element: <Navigate to="/app" replace /> },
 ]);

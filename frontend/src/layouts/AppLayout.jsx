@@ -1,27 +1,52 @@
-import { Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
+import { logoutToLogin } from "../services/token";
+
+function NavItem({ to, children }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `px-3 py-2 rounded-md text-sm font-medium ${
+          isActive
+            ? "bg-slate-700 text-white"
+            : "text-slate-200 hover:bg-slate-700 hover:text-white"
+        }`
+      }
+      end={to === "/app"}
+    >
+      {children}
+    </NavLink>
+  );
+}
 
 export default function AppLayout() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-200 via-slate-100 to-slate-300 text-slate-800">
-      <nav className="bg-slate-800 text-slate-100 shadow-md px-6 py-4 flex justify-between items-center">
-        <span className="font-semibold text-lg tracking-tight">
-          Job Monitor
-        </span>
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-slate-800 text-white">
+        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center gap-4">
+          <div className="font-bold">Job Monitor</div>
 
-        <button
-          onClick={() => {
-            localStorage.removeItem("token");
-            window.location.href = "/login";
-          }}
-          className="text-sm bg-slate-600 hover:bg-slate-500 px-3 py-1 rounded-md transition"
-        >
-          Logout
-        </button>
-      </nav>
+          <nav className="flex items-center gap-2">
+            {/* exact routes */}
+            <NavItem to="/app">Dashboard</NavItem>
+            <NavItem to="/app/ai-tools">ApplicationsAI Tools</NavItem>
+            <NavItem to="/app/applications">Applications</NavItem>
+          </nav>
 
-      <div className="max-w-5xl mx-auto py-10 px-6">
+          <div className="ml-auto">
+            <button
+              onClick={logoutToLogin}
+              className="px-3 py-2 rounded-md text-sm font-medium bg-slate-700 hover:bg-slate-600"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-6 py-10">
         <Outlet />
-      </div>
+      </main>
     </div>
   );
 }
