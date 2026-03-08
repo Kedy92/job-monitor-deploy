@@ -1,4 +1,15 @@
-import { Trash2, Tag } from "lucide-react";
+import { Trash2, Tag, ExternalLink } from "lucide-react";
+
+function siteName(url) {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, "");
+    // Capitalize first letter of each domain segment before the TLD
+    const parts = hostname.split(".");
+    return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+  } catch {
+    return url;
+  }
+}
 
 export default function MonitorItem({ monitor, onDelete, onToggle }) {
   const keywords = (monitor.keywords || "")
@@ -23,7 +34,16 @@ export default function MonitorItem({ monitor, onDelete, onToggle }) {
           </span>
         </div>
 
-        <div className="text-sm text-slate-500 break-all">{monitor.target_url}</div>
+        <a
+          href={monitor.target_url}
+          target="_blank"
+          rel="noreferrer"
+          title={monitor.target_url}
+          className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors w-fit"
+        >
+          <ExternalLink size={11} />
+          {siteName(monitor.target_url)}
+        </a>
 
         {keywords.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
