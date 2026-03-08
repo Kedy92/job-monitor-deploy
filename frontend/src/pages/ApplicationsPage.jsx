@@ -1,5 +1,6 @@
 // frontend/src/pages/ApplicationsPage.jsx
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   listApplications,
   createApplication,
@@ -72,7 +73,7 @@ export default function ApplicationsPage() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  // Busy states (VG polish)
+  // Busy states
   const [creating, setCreating] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [rowBusyId, setRowBusyId] = useState(null); // used for status change + delete
@@ -80,7 +81,6 @@ export default function ApplicationsPage() {
   const safeSetBanner = (next) => {
     setBanner(next);
     if (next) {
-      // auto-dismiss success/info after a bit (keep errors until closed)
       if (next.type !== "error") {
         window.clearTimeout(safeSetBanner._t);
         safeSetBanner._t = window.setTimeout(() => setBanner(null), 2500);
@@ -94,7 +94,6 @@ export default function ApplicationsPage() {
     try {
       const data = await listApplications();
       setItems(Array.isArray(data) ? data : []);
-      if (silent) return;
     } catch (e) {
       safeSetBanner({
         type: "error",
@@ -114,6 +113,7 @@ export default function ApplicationsPage() {
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
+
     return items.filter((a) => {
       const matchesQuery =
         !query ||
@@ -123,9 +123,11 @@ export default function ApplicationsPage() {
         String(a.company || "")
           .toLowerCase()
           .includes(query);
+
       const matchesStatus =
         statusFilter === "ALL" ||
         String(a.status || "APPLIED") === statusFilter;
+
       return matchesQuery && matchesStatus;
     });
   }, [items, q, statusFilter]);
@@ -138,10 +140,12 @@ export default function ApplicationsPage() {
       OFFER: 0,
       REJECTED: 0,
     };
+
     for (const a of items) {
       const s = String(a.status || "APPLIED");
       if (counts[s] !== undefined) counts[s] += 1;
     }
+
     return counts;
   }, [items]);
 
@@ -160,10 +164,8 @@ export default function ApplicationsPage() {
         notes: notes.trim() ? notes.trim() : null,
       });
 
-      // optimistic insert
       setItems((prev) => [created, ...prev]);
 
-      // reset form
       setJobTitle("");
       setCompany("");
       setJobUrl("");
@@ -187,11 +189,12 @@ export default function ApplicationsPage() {
 
   async function handleStatusChange(id, newStatus) {
     if (rowBusyId) return;
+
     setRowBusyId(id);
     setBanner(null);
 
-    // optimistic update
     const prevItems = items;
+
     setItems((prev) =>
       prev.map((x) => (x.id === id ? { ...x, status: newStatus } : x))
     );
@@ -199,14 +202,15 @@ export default function ApplicationsPage() {
     try {
       const updated = await updateApplication(id, { status: newStatus });
       setItems((prev) => prev.map((x) => (x.id === id ? updated : x)));
+
       safeSetBanner({
         type: "success",
         title: "Status updated",
         message: `Set to ${newStatus}.`,
       });
     } catch (e) {
-      // rollback
       setItems(prevItems);
+
       safeSetBanner({
         type: "error",
         title: "Failed to update status",
@@ -224,20 +228,20 @@ export default function ApplicationsPage() {
     setRowBusyId(id);
     setBanner(null);
 
-    // optimistic remove
     const prevItems = items;
     setItems((prev) => prev.filter((x) => x.id !== id));
 
     try {
       await deleteApplication(id);
+
       safeSetBanner({
         type: "success",
         title: "Deleted",
         message: "Application removed.",
       });
     } catch (e) {
-      // rollback
       setItems(prevItems);
+
       safeSetBanner({
         type: "error",
         title: "Failed to delete",
@@ -266,7 +270,6 @@ export default function ApplicationsPage() {
         />
       ) : null}
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard label="Total" value={stats.total} />
         <StatCard label="Applied" value={stats.APPLIED} />
@@ -275,7 +278,6 @@ export default function ApplicationsPage() {
         <StatCard label="Rejected" value={stats.REJECTED} />
       </div>
 
-      {/* Create form */}
       <form
         onSubmit={handleCreate}
         className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4"
@@ -326,7 +328,6 @@ export default function ApplicationsPage() {
         </button>
       </form>
 
-      {/* List */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
@@ -391,6 +392,7 @@ export default function ApplicationsPage() {
               {filtered.map((a) => {
                 const busy = rowBusyId === a.id;
                 const url = (a.job_url || "").trim();
+
                 return (
                   <tr key={a.id} className="border-t border-slate-100">
                     <td className="px-6 py-3 font-medium text-slate-900">
@@ -401,12 +403,15 @@ export default function ApplicationsPage() {
                         </div>
                       ) : null}
                     </td>
+
                     <td className="px-6 py-3">{a.company}</td>
+
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-2">
                         <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-700 text-xs">
                           {String(a.status || "APPLIED")}
                         </span>
+
                         <select
                           className="border rounded-md px-2 py-1"
                           value={String(a.status || "APPLIED")}
@@ -422,6 +427,7 @@ export default function ApplicationsPage() {
                             </option>
                           ))}
                         </select>
+
                         {busy ? (
                           <span className="text-xs text-slate-500">
                             Saving…
@@ -429,8 +435,15 @@ export default function ApplicationsPage() {
                         ) : null}
                       </div>
                     </td>
+
                     <td className="px-6 py-3 text-right">
                       <div className="inline-flex items-center gap-3">
+                        <Link to={`/app/cv-builder/${a.id}`}>
+                          <button className="px-3 py-1 rounded-md border border-slate-300 hover:bg-slate-50 text-sm">
+                            Generate CV
+                          </button>
+                        </Link>
+
                         {url ? (
                           <a
                             href={url}

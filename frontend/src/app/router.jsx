@@ -10,6 +10,8 @@ import DashboardPage from "../pages/DashboardPage";
 import AiToolsPage from "../pages/AiToolsPage";
 import ApplicationsPage from "../pages/ApplicationsPage";
 
+import CVBuilderPage from "../pages/CVBuilderPage";
+
 export const router = createBrowserRouter([
   // Public auth routes
   {
@@ -33,6 +35,8 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: "ai-tools", element: <AiToolsPage /> },
       { path: "applications", element: <ApplicationsPage /> },
+
+      { path: "cv-builder/:applicationId", element: <CVBuilderPage /> },
     ],
   },
 

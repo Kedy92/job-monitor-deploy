@@ -1,0 +1,26 @@
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel
+from pydantic.config import ConfigDict
+
+
+class CVVersionCreate(BaseModel):
+    application_id: int
+    job_ad_text: str
+    template_name: str = "modern"
+
+
+class CVVersionRead(BaseModel):
+    id: int
+    application_id: int
+    job_ad_text: str
+    template_name: str
+    cv_summary: Optional[str] = None
+    cv_skills: Optional[str] = None
+    cv_experience: Optional[str] = None
+    ats_score: Optional[int] = None
+    missing_keywords: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

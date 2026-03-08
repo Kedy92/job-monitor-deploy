@@ -37,3 +37,4 @@ uvloop==0.22.1
 watchfiles==1.1.1
 websockets==16.0
 apscheduler==3.10.4
+reportlab

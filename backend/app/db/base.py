@@ -6,3 +6,5 @@ from app.models.user import User
 from app.models.monitor import Monitor
 from app.models.monitor_run import MonitorRun
 from app.models.application import Application
+
+from app.models.cv_version import CVVersion

@@ -23,6 +23,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 from app.db.session import SessionLocal
 from app.services.worker import run_monitor_checks
 
+from app.api.routes.cv_versions import router as cv_versions_router
+
 
 def scheduler_job():
     db = SessionLocal()
@@ -82,6 +84,7 @@ app.include_router(users_router)
 app.include_router(notifications_test_router)
 app.include_router(ai_router)
 app.include_router(applications_router)
+app.include_router(cv_versions_router)
 
 
 @app.get("/")
