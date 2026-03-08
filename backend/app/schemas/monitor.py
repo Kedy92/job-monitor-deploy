@@ -10,6 +10,8 @@ class MonitorCreate(BaseModel):
     monitor_type: str
     interval_minutes: int = Field(default=10, ge=1)
     active: bool = True
+    keywords: Optional[str] = ""
+    match_threshold: int = Field(default=60, ge=1, le=100)
 
 
 class MonitorUpdate(BaseModel):
@@ -18,6 +20,8 @@ class MonitorUpdate(BaseModel):
     monitor_type: Optional[str] = None
     interval_minutes: Optional[int] = Field(default=None, ge=1)
     active: Optional[bool] = None
+    keywords: Optional[str] = None
+    match_threshold: Optional[int] = Field(default=None, ge=1, le=100)
 
 
 class MonitorRead(BaseModel):
@@ -31,3 +35,5 @@ class MonitorRead(BaseModel):
     interval_minutes: int
     active: bool
     created_at: datetime
+    keywords: Optional[str] = ""
+    match_threshold: int = 60

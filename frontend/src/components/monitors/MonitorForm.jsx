@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Plus } from "lucide-react";
 
 const MONITOR_TYPES = [
   { value: "job", label: "Job" },
@@ -11,62 +12,94 @@ export default function MonitorForm({ onCreate }) {
   const [targetUrl, setTargetUrl] = useState("");
   const [intervalMinutes, setIntervalMinutes] = useState(10);
   const [monitorType, setMonitorType] = useState("job");
+  const [keywords, setKeywords] = useState("");
+  const [matchThreshold, setMatchThreshold] = useState(60);
 
   async function handleSubmit(e) {
     e.preventDefault();
-
     await onCreate({
       name: name.trim(),
       target_url: targetUrl.trim(),
-      monitor_type: monitorType, // ✅ REQUIRED by backend
+      monitor_type: monitorType,
       interval_minutes: Number(intervalMinutes),
       active: true,
+      keywords: keywords.trim(),
+      match_threshold: Number(matchThreshold),
     });
-
     setName("");
     setTargetUrl("");
     setIntervalMinutes(10);
     setMonitorType("job");
+    setKeywords("");
+    setMatchThreshold(60);
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <input
-        className="p-2 rounded-md bg-white text-slate-900 border border-slate-300 w-full placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
-        placeholder="Monitor name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <input
+          className="input"
+          placeholder="Monitor name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
 
-      <input
-        className="p-2 rounded-md bg-white text-slate-900 border border-slate-300 w-full placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
-        placeholder="Target URL"
-        value={targetUrl}
-        onChange={(e) => setTargetUrl(e.target.value)}
-      />
+        <select
+          className="input"
+          value={monitorType}
+          onChange={(e) => setMonitorType(e.target.value)}
+        >
+          {MONITOR_TYPES.map((t) => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
+        </select>
 
-      <select
-        className="p-2 rounded-md bg-white text-slate-900 border border-slate-300 w-full focus:outline-none focus:ring-2 focus:ring-slate-400"
-        value={monitorType}
-        onChange={(e) => setMonitorType(e.target.value)}
-      >
-        {MONITOR_TYPES.map((t) => (
-          <option key={t.value} value={t.value}>
-            {t.label}
-          </option>
-        ))}
-      </select>
+        <input
+          className="input md:col-span-2"
+          placeholder="Target URL (e.g. https://jobs.example.com/listings)"
+          value={targetUrl}
+          onChange={(e) => setTargetUrl(e.target.value)}
+          required
+        />
 
-      <input
-        type="number"
-        min="1"
-        className="p-2 rounded-md bg-white text-slate-900 border border-slate-300 w-full placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
-        placeholder="Interval minutes"
-        value={intervalMinutes}
-        onChange={(e) => setIntervalMinutes(e.target.value)}
-      />
+        <input
+          className="input md:col-span-2"
+          placeholder="Keywords to match, comma separated (e.g. Python, React, Stockholm)"
+          value={keywords}
+          onChange={(e) => setKeywords(e.target.value)}
+        />
 
-      <button className="bg-slate-800 text-white px-4 py-2 rounded-md hover:bg-slate-700 transition">
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            min="1"
+            className="input"
+            placeholder="Interval (minutes)"
+            value={intervalMinutes}
+            onChange={(e) => setIntervalMinutes(e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-slate-600 whitespace-nowrap">
+            Match threshold:
+          </label>
+          <input
+            type="number"
+            min="1"
+            max="100"
+            className="input"
+            placeholder="60"
+            value={matchThreshold}
+            onChange={(e) => setMatchThreshold(e.target.value)}
+          />
+          <span className="text-sm text-slate-500">%</span>
+        </div>
+      </div>
+
+      <button type="submit" className="btn-primary">
+        <Plus size={16} />
         Create Monitor
       </button>
     </form>

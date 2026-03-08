@@ -22,6 +22,8 @@ class Monitor(Base):
     )  # e.g. "job" | "housing" | "appointment"
     interval_minutes = Column(Integer, nullable=False, default=10)
     active = Column(Boolean, nullable=False, default=True)
+    keywords = Column(String(500), nullable=True, default="")  # comma-separated
+    match_threshold = Column(Integer, nullable=False, default=60)  # % score to trigger email
 
     created_at = Column(
         DateTime(timezone=True),
