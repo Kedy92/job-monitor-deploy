@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { login } from "../api/auth";
 
 export default function LoginPage() {
@@ -9,6 +9,8 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const justRegistered = location.state?.registered === true;
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -35,6 +37,12 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
         <p className="text-slate-500 text-sm mt-1">Sign in to your account.</p>
       </div>
+
+      {justRegistered && (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
+          Account created! You can now sign in.
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
