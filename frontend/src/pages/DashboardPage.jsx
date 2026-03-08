@@ -14,6 +14,7 @@ export default function DashboardPage() {
     addMonitor,
     removeMonitor,
     toggleMonitor,
+    editMonitor,
   } = useMonitors();
 
   return (
@@ -62,6 +63,7 @@ export default function DashboardPage() {
             monitors={monitors}
             onDelete={removeMonitor}
             onToggle={toggleMonitor}
+            onEdit={editMonitor}
           />
         )}
       </section>

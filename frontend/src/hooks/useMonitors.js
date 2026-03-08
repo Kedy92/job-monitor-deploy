@@ -54,6 +54,18 @@ export function useMonitors() {
     }
   }
 
+  async function editMonitor(id, payload) {
+    try {
+      const updated = await updateMonitor(id, payload);
+      setMonitors((prev) => prev.map((m) => (m.id === id ? updated : m)));
+      setError(null);
+      return updated;
+    } catch (err) {
+      setError(err?.message || "Failed to update monitor");
+      throw err;
+    }
+  }
+
   useEffect(() => {
     load();
   }, []);
@@ -66,5 +78,6 @@ export function useMonitors() {
     addMonitor,
     removeMonitor,
     toggleMonitor,
+    editMonitor,
   };
 }
