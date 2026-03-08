@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Briefcase, Plus, RefreshCw, Trash2, FileText, ExternalLink, Search } from "lucide-react";
 import {
+  Briefcase, Plus, RefreshCw, Trash2, FileText,
+  ExternalLink, Search, ChevronDown,
+} from "lucide-react";
+import {
+  getApplicationStats,
   listApplications,
   createApplication,
   updateApplication,
@@ -17,9 +21,15 @@ const STATUS_STYLES = {
   REJECTED:  "bg-red-100 text-red-600",
 };
 
-function cn(...classes) {
-  return classes.filter(Boolean).join(" ");
-}
+const SCORE_STYLE = (score) => {
+  if (score >= 75) return "bg-emerald-100 text-emerald-700";
+  if (score >= 50) return "bg-yellow-100 text-yellow-700";
+  return "bg-red-100 text-red-600";
+};
+
+const PAGE_SIZE = 50;
+
+function cn(...classes) { return classes.filter(Boolean).join(" "); }
 
 function StatCard({ label, value, color = "indigo" }) {
   const colors = {
@@ -29,7 +39,6 @@ function StatCard({ label, value, color = "indigo" }) {
     emerald: "border-emerald-100 bg-emerald-50 text-emerald-700",
     red:     "border-red-100 bg-red-50 text-red-600",
   };
-
   return (
     <div className={cn("rounded-xl border p-4", colors[color])}>
       <div className="text-xs font-medium uppercase tracking-wide opacity-70">{label}</div>
@@ -44,7 +53,6 @@ function Banner({ type = "info", title, message, onClose }) {
     success: "border-emerald-200 bg-emerald-50 text-emerald-900",
     info:    "border-indigo-200 bg-indigo-50 text-indigo-900",
   };
-
   return (
     <div className={cn("rounded-xl border px-4 py-3 flex items-start gap-3", styles[type] || styles.info)}>
       <div className="flex-1">
@@ -52,59 +60,71 @@ function Banner({ type = "info", title, message, onClose }) {
         <div className="text-sm opacity-90">{message}</div>
       </div>
       {onClose && (
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-sm px-2 py-1 rounded-md hover:bg-black/5"
-          aria-label="Close"
-        >
-          ✕
-        </button>
+        <button type="button" onClick={onClose} className="text-sm px-2 py-1 rounded-md hover:bg-black/5">✕</button>
       )}
     </div>
   );
 }
 
 export default function ApplicationsPage() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [banner, setBanner] = useState(null);
+  const [items, setItems]           = useState([]);
+  const [stats, setStats]           = useState({ total: 0, APPLIED: 0, INTERVIEW: 0, OFFER: 0, REJECTED: 0 });
+  const [loading, setLoading]       = useState(true);
+  const [hasMore, setHasMore]       = useState(false);
+  const [page, setPage]             = useState(0);
+  const [banner, setBanner]         = useState(null);
 
-  const [jobTitle, setJobTitle] = useState("");
-  const [company, setCompany] = useState("");
-  const [jobUrl, setJobUrl] = useState("");
-  const [notes, setNotes] = useState("");
+  // Create form
+  const [jobTitle, setJobTitle]     = useState("");
+  const [company, setCompany]       = useState("");
+  const [jobUrl, setJobUrl]         = useState("");
+  const [notes, setNotes]           = useState("");
+  const [appliedAt, setAppliedAt]   = useState("");
+  const [showForm, setShowForm]     = useState(false);
 
-  const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
-
-  const [creating, setCreating] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [rowBusyId, setRowBusyId] = useState(null);
+  // Table controls
+  const [q, setQ]                           = useState("");
+  const [statusFilter, setStatusFilter]     = useState("ALL");
+  const [creating, setCreating]             = useState(false);
+  const [refreshing, setRefreshing]         = useState(false);
+  const [rowBusyId, setRowBusyId]           = useState(null);
 
   const safeSetBanner = (next) => {
     setBanner(next);
     if (next && next.type !== "error") {
       window.clearTimeout(safeSetBanner._t);
-      safeSetBanner._t = window.setTimeout(() => setBanner(null), 2500);
+      safeSetBanner._t = window.setTimeout(() => setBanner(null), 3000);
     }
   };
 
-  async function load({ silent = false } = {}) {
+  const loadStats = useCallback(async () => {
+    try {
+      const data = await getApplicationStats();
+      setStats(data);
+    } catch { /* non-critical */ }
+  }, []);
+
+  const loadPage = useCallback(async (pageIndex, silent = false) => {
     if (!silent) setLoading(true);
     setRefreshing(true);
     try {
-      const data = await listApplications();
-      setItems(Array.isArray(data) ? data : []);
+      const data = await listApplications({ skip: pageIndex * PAGE_SIZE, limit: PAGE_SIZE });
+      const arr = Array.isArray(data) ? data : [];
+      setItems((prev) => pageIndex === 0 ? arr : [...prev, ...arr]);
+      setHasMore(arr.length === PAGE_SIZE);
+      setPage(pageIndex);
     } catch (e) {
       safeSetBanner({ type: "error", title: "Failed to load applications", message: e?.message || "Please try again." });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    loadPage(0);
+    loadStats();
+  }, []);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -118,15 +138,6 @@ export default function ApplicationsPage() {
     });
   }, [items, q, statusFilter]);
 
-  const stats = useMemo(() => {
-    const counts = { total: items.length, APPLIED: 0, INTERVIEW: 0, OFFER: 0, REJECTED: 0 };
-    for (const a of items) {
-      const s = String(a.status || "APPLIED");
-      if (counts[s] !== undefined) counts[s] += 1;
-    }
-    return counts;
-  }, [items]);
-
   async function handleCreate(e) {
     e.preventDefault();
     if (creating) return;
@@ -138,10 +149,19 @@ export default function ApplicationsPage() {
         company,
         job_url: jobUrl.trim() || null,
         notes: notes.trim() || null,
+        applied_at: appliedAt || null,
       });
       setItems((prev) => [created, ...prev]);
-      setJobTitle(""); setCompany(""); setJobUrl(""); setNotes("");
-      safeSetBanner({ type: "success", title: "Application added", message: "Saved successfully." });
+      setJobTitle(""); setCompany(""); setJobUrl(""); setNotes(""); setAppliedAt("");
+      setShowForm(false);
+      await loadStats();
+      safeSetBanner({
+        type: "success",
+        title: "Application added",
+        message: created.match_score != null
+          ? `Saved. Auto match score: ${created.match_score}%`
+          : "Saved successfully.",
+      });
     } catch (e2) {
       safeSetBanner({ type: "error", title: "Failed to add application", message: e2?.message || "Please try again." });
     } finally {
@@ -152,12 +172,12 @@ export default function ApplicationsPage() {
   async function handleStatusChange(id, newStatus) {
     if (rowBusyId) return;
     setRowBusyId(id);
-    setBanner(null);
     const prevItems = items;
     setItems((prev) => prev.map((x) => (x.id === id ? { ...x, status: newStatus } : x)));
     try {
       const updated = await updateApplication(id, { status: newStatus });
       setItems((prev) => prev.map((x) => (x.id === id ? updated : x)));
+      await loadStats();
       safeSetBanner({ type: "success", title: "Status updated", message: `Set to ${newStatus}.` });
     } catch (e) {
       setItems(prevItems);
@@ -171,11 +191,11 @@ export default function ApplicationsPage() {
     if (rowBusyId) return;
     if (!confirm("Delete this application?")) return;
     setRowBusyId(id);
-    setBanner(null);
     const prevItems = items;
     setItems((prev) => prev.filter((x) => x.id !== id));
     try {
       await deleteApplication(id);
+      await loadStats();
       safeSetBanner({ type: "success", title: "Deleted", message: "Application removed." });
     } catch (e) {
       setItems(prevItems);
@@ -187,22 +207,28 @@ export default function ApplicationsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-indigo-100 rounded-lg">
-          <Briefcase size={22} className="text-indigo-600" />
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-indigo-100 rounded-lg">
+            <Briefcase size={22} className="text-indigo-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Applications</h1>
+            <p className="text-sm text-slate-500">Track your job applications and update status.</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Applications</h1>
-          <p className="text-sm text-slate-500">Track your job applications and update status.</p>
-        </div>
+        <button onClick={() => setShowForm((v) => !v)} className="btn-primary">
+          <Plus size={16} />
+          {showForm ? "Cancel" : "Add application"}
+        </button>
       </div>
 
       {banner && (
         <Banner type={banner.type} title={banner.title} message={banner.message} onClose={() => setBanner(null)} />
       )}
 
-      {/* Stats */}
+      {/* Stats — from backend */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard label="Total"     value={stats.total}     color="indigo" />
         <StatCard label="Applied"   value={stats.APPLIED}   color="blue" />
@@ -212,89 +238,55 @@ export default function ApplicationsPage() {
       </div>
 
       {/* Create form */}
-      <form onSubmit={handleCreate} className="card p-6 space-y-4">
-        <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-          <Plus size={18} className="text-indigo-600" /> Add new application
-        </h2>
+      {showForm && (
+        <form onSubmit={handleCreate} className="card p-6 space-y-4">
+          <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+            <Plus size={18} className="text-indigo-600" /> New application
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input className="input" placeholder="Job title *" value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)} required disabled={creating} />
+            <input className="input" placeholder="Company *" value={company}
+              onChange={(e) => setCompany(e.target.value)} required disabled={creating} />
+            <input className="input md:col-span-2" placeholder="Job URL (optional — auto-scores on save)"
+              value={jobUrl} onChange={(e) => setJobUrl(e.target.value)} disabled={creating} />
+            <div className="space-y-1">
+              <label className="text-xs text-slate-500">Date applied (optional)</label>
+              <input type="date" className="input" value={appliedAt}
+                onChange={(e) => setAppliedAt(e.target.value)} disabled={creating} />
+            </div>
+            <textarea className="input h-20 resize-none" placeholder="Notes (optional)"
+              value={notes} onChange={(e) => setNotes(e.target.value)} disabled={creating} />
+          </div>
+          <button type="submit" disabled={creating} className="btn-primary">
+            <Plus size={16} />
+            {creating ? "Adding..." : "Save application"}
+          </button>
+        </form>
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            className="input"
-            placeholder="Job title *"
-            value={jobTitle}
-            onChange={(e) => setJobTitle(e.target.value)}
-            required
-            disabled={creating}
-          />
-          <input
-            className="input"
-            placeholder="Company *"
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-            required
-            disabled={creating}
-          />
-          <input
-            className="input md:col-span-2"
-            placeholder="Job URL (optional)"
-            value={jobUrl}
-            onChange={(e) => setJobUrl(e.target.value)}
-            disabled={creating}
-          />
-        </div>
-
-        <textarea
-          className="input h-24 resize-none"
-          placeholder="Notes (optional)"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          disabled={creating}
-        />
-
-        <button type="submit" disabled={creating} className="btn-primary">
-          <Plus size={16} />
-          {creating ? "Adding..." : "Add application"}
-        </button>
-      </form>
-
-      {/* Applications table */}
+      {/* Table */}
       <div className="card overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="font-semibold text-slate-900">Your applications</h2>
             <div className="text-xs text-slate-500 mt-0.5">
-              Showing {filtered.length} of {items.length}
+              Showing {filtered.length} of {stats.total}
             </div>
           </div>
-
           <div className="flex flex-col md:flex-row gap-2 md:items-center">
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                className="input pl-8 md:w-56"
-                placeholder="Search job or company..."
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
+              <input className="input pl-8 md:w-56" placeholder="Search job or company..."
+                value={q} onChange={(e) => setQ(e.target.value)} />
             </div>
-
-            <select
-              className="input md:w-40"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
+            <select className="input md:w-40" value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="ALL">All statuses</option>
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
-
-            <button
-              type="button"
-              onClick={() => load({ silent: true })}
-              disabled={refreshing}
-              className="btn-secondary"
-            >
+            <button type="button" onClick={() => { loadPage(0, true); loadStats(); }}
+              disabled={refreshing} className="btn-secondary">
               <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
               {refreshing ? "Refreshing..." : "Refresh"}
             </button>
@@ -315,13 +307,15 @@ export default function ApplicationsPage() {
                 <th className="text-left px-6 py-3">Job</th>
                 <th className="text-left px-6 py-3">Company</th>
                 <th className="text-left px-6 py-3">Status</th>
+                <th className="text-left px-6 py-3">Score</th>
+                <th className="text-left px-6 py-3">Applied</th>
                 <th className="text-right px-6 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((a) => {
-                const busy = rowBusyId === a.id;
-                const url = (a.job_url || "").trim();
+                const busy   = rowBusyId === a.id;
+                const url    = (a.job_url || "").trim();
                 const status = String(a.status || "APPLIED");
 
                 return (
@@ -331,12 +325,17 @@ export default function ApplicationsPage() {
                       {a.notes && (
                         <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{a.notes}</div>
                       )}
+                      {a.status_changed_at && (
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          Status updated: {new Date(a.status_changed_at).toLocaleDateString()}
+                        </div>
+                      )}
                     </td>
 
                     <td className="px-6 py-4 text-slate-600">{a.company}</td>
 
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className={cn("inline-flex items-center px-2 py-1 rounded-full text-xs font-medium", STATUS_STYLES[status] || "bg-slate-100 text-slate-600")}>
                           {status}
                         </span>
@@ -346,36 +345,42 @@ export default function ApplicationsPage() {
                           onChange={(e) => handleStatusChange(a.id, e.target.value)}
                           disabled={busy}
                         >
-                          {STATUS_OPTIONS.map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
+                          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
                         {busy && <span className="text-xs text-slate-400">Saving…</span>}
                       </div>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      {a.match_score != null ? (
+                        <span className={cn("inline-flex items-center px-2 py-1 rounded-full text-xs font-medium", SCORE_STYLE(a.match_score))}>
+                          {a.match_score}%
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </td>
+
+                    <td className="px-6 py-4 text-slate-500 text-xs">
+                      {a.applied_at
+                        ? new Date(a.applied_at).toLocaleDateString()
+                        : <span className="text-slate-300">—</span>}
                     </td>
 
                     <td className="px-6 py-4 text-right">
                       <div className="inline-flex items-center gap-2">
                         <Link to={`/app/cv-builder/${a.id}`}>
                           <button className="btn-secondary py-1 px-2 text-xs">
-                            <FileText size={13} />
-                            Generate CV
+                            <FileText size={13} /> Generate CV
                           </button>
                         </Link>
-
                         {url && (
                           <a href={url} target="_blank" rel="noreferrer" className="btn-secondary py-1 px-2 text-xs">
-                            <ExternalLink size={13} />
-                            Link
+                            <ExternalLink size={13} /> Link
                           </a>
                         )}
-
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(a.id)}
-                          disabled={busy}
-                          className="btn-danger py-1 px-2 text-xs"
-                        >
+                        <button type="button" onClick={() => handleDelete(a.id)}
+                          disabled={busy} className="btn-danger py-1 px-2 text-xs">
                           <Trash2 size={13} />
                           {busy ? "..." : "Delete"}
                         </button>
@@ -386,6 +391,23 @@ export default function ApplicationsPage() {
               })}
             </tbody>
           </table>
+        )}
+
+        {/* Pagination — load more */}
+        {hasMore && !loading && (
+          <div className="px-6 py-4 border-t border-slate-100 text-center">
+            <button
+              onClick={() => loadPage(page + 1, true)}
+              disabled={refreshing}
+              className="btn-secondary"
+            >
+              {refreshing ? (
+                <><RefreshCw size={14} className="animate-spin" /> Loading...</>
+              ) : (
+                <><ChevronDown size={14} /> Load more</>
+              )}
+            </button>
+          </div>
         )}
       </div>
     </div>

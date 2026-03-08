@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 
 from pydantic import BaseModel
@@ -11,6 +11,7 @@ class ApplicationCreate(BaseModel):
     job_url: Optional[str] = None
     match_score: Optional[int] = None
     notes: Optional[str] = None
+    applied_at: Optional[date] = None
 
 
 class ApplicationUpdate(BaseModel):
@@ -20,6 +21,7 @@ class ApplicationUpdate(BaseModel):
     match_score: Optional[int] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+    applied_at: Optional[date] = None
 
 
 class ApplicationRead(BaseModel):
@@ -30,6 +32,16 @@ class ApplicationRead(BaseModel):
     match_score: Optional[int] = None
     status: str
     notes: Optional[str] = None
+    applied_at: Optional[date] = None
+    status_changed_at: Optional[datetime] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ApplicationStats(BaseModel):
+    total: int
+    APPLIED: int
+    INTERVIEW: int
+    OFFER: int
+    REJECTED: int

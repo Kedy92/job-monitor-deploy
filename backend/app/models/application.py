@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Date
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -9,7 +9,6 @@ class Application(Base):
     __tablename__ = "applications"
 
     id = Column(Integer, primary_key=True, index=True)
-
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     job_title = Column(String(255), nullable=False)
@@ -22,6 +21,9 @@ class Application(Base):
     # APPLIED / INTERVIEW / REJECTED / OFFER
 
     notes = Column(Text, nullable=True)
+
+    applied_at = Column(Date, nullable=True)                           # user-set application date
+    status_changed_at = Column(DateTime(timezone=True), nullable=True) # auto-set on status change
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
