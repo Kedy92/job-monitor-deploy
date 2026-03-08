@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     ENV: str = "dev"
 
     DATABASE_URL: str
+    ANTHROPIC_API_KEY: str = ""
 
 
 settings = Settings()
