@@ -1,3 +1,4 @@
+import { Radio } from "lucide-react";
 import MonitorForm from "../components/monitors/MonitorForm";
 import MonitorList from "../components/monitors/MonitorList";
 import ErrorBanner from "../components/ui/ErrorBanner";
@@ -18,10 +19,17 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <header>
-        <h1 className="text-3xl font-bold text-slate-900">Monitors</h1>
-        <p className="mt-1 text-slate-600">
-          Create monitors and control whether they are active or paused.
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-indigo-100 rounded-lg">
+            <Radio size={22} className="text-indigo-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Monitors</h1>
+            <p className="text-sm text-slate-500">
+              Create monitors and control whether they are active or paused.
+            </p>
+          </div>
+        </div>
       </header>
 
       <ErrorBanner
@@ -30,15 +38,13 @@ export default function DashboardPage() {
         onClose={() => setError(null)}
       />
 
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Create monitor</h2>
-        <div className="mt-4">
-          <MonitorForm onCreate={addMonitor} />
-        </div>
+      <section className="card p-6">
+        <h2 className="text-base font-semibold text-slate-900 mb-4">Create monitor</h2>
+        <MonitorForm onCreate={addMonitor} />
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">Your monitors</h2>
+        <h2 className="text-base font-semibold text-slate-900">Your monitors</h2>
 
         {loading && (
           <>

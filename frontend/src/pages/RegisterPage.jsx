@@ -1,36 +1,27 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { register } from "../api/auth"; // <-- uses your api client wrapper
+import { register } from "../api/auth";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
   const navigate = useNavigate();
 
   async function handleRegister(e) {
     e.preventDefault();
     if (isSubmitting) return;
-
+    setError(null);
     setIsSubmitting(true);
     try {
-      await register({
-        name: name.trim(),
-        email: email.trim(),
-        password,
-      });
-
-      alert("Account created! Please login.");
-      navigate("/login", { replace: true });
+      await register({ name: name.trim(), email: email.trim(), password });
+      navigate("/login", { replace: true, state: { registered: true } });
     } catch (err) {
-      // Works with both our api wrapper errors and raw fetch errors
-      const msg =
-        err?.message || err?.data?.detail || err?.detail || "Register failed";
-      alert(`Register failed: ${msg}`);
+      setError(err?.message || err?.data?.detail || err?.detail || "Registration failed");
     } finally {
-      // CRITICAL: without this, button can stay stuck forever
       setIsSubmitting(false);
     }
   }
@@ -38,53 +29,62 @@ export default function RegisterPage() {
   return (
     <form
       onSubmit={handleRegister}
-      className="w-[420px] bg-white rounded-2xl border border-slate-200 shadow-sm p-6"
+      className="bg-white rounded-2xl shadow-xl border border-white/10 p-8 space-y-5"
     >
-      <h1 className="text-2xl font-bold text-slate-900">Create account</h1>
-      <p className="text-slate-600 mt-1">
-        Register a new user for Job Monitor.
-      </p>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Create account</h1>
+        <p className="text-slate-500 text-sm mt-1">Join Job Monitor today.</p>
+      </div>
 
-      <div className="mt-5 space-y-3">
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="space-y-3">
         <input
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-900 placeholder-slate-400 outline-none focus:ring-2 focus:ring-slate-300"
-          placeholder="Name"
+          className="input"
+          placeholder="Full name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoComplete="name"
+          required
         />
-
         <input
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-900 placeholder-slate-400 outline-none focus:ring-2 focus:ring-slate-300"
+          className="input"
           placeholder="Email"
+          type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
+          required
         />
-
         <input
           type="password"
-          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-900 placeholder-slate-400 outline-none focus:ring-2 focus:ring-slate-300"
+          className="input"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
+          required
         />
       </div>
 
       <button
+        type="submit"
         disabled={isSubmitting}
-        className="mt-4 w-full rounded-xl bg-slate-900 text-white py-2 font-medium disabled:opacity-60"
+        className="btn-primary w-full justify-center py-2.5 text-base"
       >
         {isSubmitting ? "Creating..." : "Create account"}
       </button>
 
-      <div className="mt-4 text-sm text-slate-600">
+      <p className="text-sm text-slate-500 text-center">
         Already have an account?{" "}
-        <Link to="/login" className="font-medium text-slate-900 underline">
-          Login
+        <Link to="/login" className="font-medium text-indigo-600 hover:underline">
+          Sign in
         </Link>
-      </div>
+      </p>
     </form>
   );
 }

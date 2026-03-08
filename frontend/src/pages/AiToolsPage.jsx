@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Wand2, Search } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL;
 
@@ -10,10 +11,8 @@ export default function AiToolsPage() {
 
   async function handleAnalyze() {
     if (!jobDescription.trim()) return;
-
     setLoading(true);
     setResult(null);
-
     try {
       const res = await fetch(`${API_BASE}/ai/match-score`, {
         method: "POST",
@@ -23,43 +22,53 @@ export default function AiToolsPage() {
         },
         body: JSON.stringify({
           job_description: jobDescription,
-          profile_keywords: keywords
-            .split(",")
-            .map((k) => k.trim())
-            .filter(Boolean),
+          profile_keywords: keywords.split(",").map((k) => k.trim()).filter(Boolean),
         }),
       });
-
       if (!res.ok) throw new Error("Request failed");
-
-      const data = await res.json();
-      setResult(data);
-    } catch (err) {
+      setResult(await res.json());
+    } catch {
       alert("Analysis failed");
     } finally {
       setLoading(false);
     }
   }
 
+  const score = result?.score ?? 0;
+  const scoreColor =
+    score >= 75 ? "bg-emerald-500" :
+    score >= 50 ? "bg-yellow-400" : "bg-red-400";
+  const scoreBadge =
+    score >= 75 ? "bg-emerald-100 text-emerald-700" :
+    score >= 50 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-600";
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <h1 className="text-3xl font-bold text-slate-900">CV Match Analyzer</h1>
-      <p className="text-slate-600">
-        Analyze how well your profile matches a job description.
-      </p>
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-indigo-100 rounded-lg">
+          <Wand2 size={22} className="text-indigo-600" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">CV Match Analyzer</h1>
+          <p className="text-sm text-slate-500">
+            Analyze how well your profile matches a job description.
+          </p>
+        </div>
+      </div>
 
-      {/* Input Section */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+      {/* Input */}
+      <div className="card p-6 space-y-4">
         <textarea
-          className="w-full h-40 p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400"
+          className="input resize-none h-40"
           placeholder="Paste job description here..."
           value={jobDescription}
           onChange={(e) => setJobDescription(e.target.value)}
         />
 
         <input
-          className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400"
-          placeholder="Enter your profile keywords (comma separated)"
+          className="input"
+          placeholder="Your profile keywords, comma separated (e.g. Python, React, SQL)"
           value={keywords}
           onChange={(e) => setKeywords(e.target.value)}
         />
@@ -67,66 +76,66 @@ export default function AiToolsPage() {
         <button
           onClick={handleAnalyze}
           disabled={loading}
-          className="bg-slate-900 text-white px-5 py-2 rounded-md hover:bg-slate-700 transition disabled:opacity-50"
+          className="btn-primary text-base px-6 py-3"
         >
+          <Search size={18} />
           {loading ? "Analyzing..." : "Analyze Match"}
         </button>
       </div>
 
-      {/* Result Section */}
+      {/* Result */}
       {result && (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-          {/* Score */}
+        <div className="card p-6 space-y-6">
+          {/* Score bar */}
           <div>
-            <div className="flex justify-between mb-2">
-              <span className="font-semibold text-lg">Match Score</span>
-              <span className="font-semibold text-lg">
-                {result.score ?? 0}%
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-semibold text-slate-900">Match Score</span>
+              <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${scoreBadge}`}>
+                {score}%
               </span>
             </div>
-
-            <div className="w-full bg-slate-200 rounded-full h-4">
+            <div className="w-full bg-slate-200 rounded-full h-3">
               <div
-                className={`h-4 rounded-full transition-all duration-500 ${
-                  result.score >= 75
-                    ? "bg-green-500"
-                    : result.score >= 50
-                    ? "bg-yellow-500"
-                    : "bg-red-500"
-                }`}
-                style={{ width: `${result.score ?? 0}%` }}
+                className={`h-3 rounded-full transition-all duration-700 ${scoreColor}`}
+                style={{ width: `${score}%` }}
               />
             </div>
           </div>
 
-          {/* Matched Keywords */}
+          {/* Matched keywords */}
           <div>
-            <strong>Matched Keywords</strong>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {(result.matched_keywords || []).map((k) => (
-                <span
-                  key={k}
-                  className="bg-green-100 text-green-700 px-2 py-1 rounded-md text-sm"
-                >
-                  {k}
-                </span>
-              ))}
-            </div>
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+              Matched Keywords
+            </h3>
+            {(result.matched_keywords || []).length === 0 ? (
+              <p className="text-sm text-slate-500">No matches found.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {(result.matched_keywords || []).map((k) => (
+                  <span key={k} className="bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-sm">
+                    {k}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Missing Keywords */}
+          {/* Missing keywords */}
           <div>
-            <strong>Missing Keywords</strong>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {(result.missing_keywords || []).map((k) => (
-                <span
-                  key={k}
-                  className="bg-red-100 text-red-700 px-2 py-1 rounded-md text-sm"
-                >
-                  {k}
-                </span>
-              ))}
-            </div>
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+              Missing Keywords
+            </h3>
+            {(result.missing_keywords || []).length === 0 ? (
+              <p className="text-sm text-slate-500">Nothing missing — great match!</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {(result.missing_keywords || []).map((k) => (
+                  <span key={k} className="bg-red-50 text-red-600 border border-red-100 px-2.5 py-1 rounded-full text-sm">
+                    {k}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

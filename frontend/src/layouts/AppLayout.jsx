@@ -1,19 +1,21 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { logoutToLogin } from "../services/token";
+import { LayoutDashboard, Briefcase, Wand2, LogOut } from "lucide-react";
 
-function NavItem({ to, children }) {
+function NavItem({ to, icon: Icon, children }) {
   return (
     <NavLink
       to={to}
+      end={to === "/app"}
       className={({ isActive }) =>
-        `px-3 py-2 rounded-md text-sm font-medium ${
+        `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
           isActive
-            ? "bg-slate-700 text-white"
-            : "text-slate-200 hover:bg-slate-700 hover:text-white"
+            ? "bg-indigo-500 text-white"
+            : "text-indigo-100 hover:bg-indigo-700 hover:text-white"
         }`
       }
-      end={to === "/app"}
     >
+      {Icon && <Icon size={16} />}
       {children}
     </NavLink>
   );
@@ -22,22 +24,25 @@ function NavItem({ to, children }) {
 export default function AppLayout() {
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-slate-800 text-white">
-        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center gap-4">
-          <div className="font-bold">Job Monitor</div>
+      <header className="bg-indigo-800 text-white shadow-md">
+        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center gap-6">
+          <div className="flex items-center gap-2 font-bold text-lg tracking-tight">
+            <Briefcase size={20} className="text-indigo-300" />
+            <span>Job Monitor</span>
+          </div>
 
-          <nav className="flex items-center gap-2">
-            {/* exact routes */}
-            <NavItem to="/app">Dashboard</NavItem>
-            <NavItem to="/app/ai-tools">ApplicationsAI Tools</NavItem>
-            <NavItem to="/app/applications">Applications</NavItem>
+          <nav className="flex items-center gap-1">
+            <NavItem to="/app" icon={LayoutDashboard}>Dashboard</NavItem>
+            <NavItem to="/app/applications" icon={Briefcase}>Applications</NavItem>
+            <NavItem to="/app/ai-tools" icon={Wand2}>AI Tools</NavItem>
           </nav>
 
           <div className="ml-auto">
             <button
               onClick={logoutToLogin}
-              className="px-3 py-2 rounded-md text-sm font-medium bg-slate-700 hover:bg-slate-600"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-indigo-100 hover:bg-indigo-700 hover:text-white transition-colors"
             >
+              <LogOut size={16} />
               Logout
             </button>
           </div>
