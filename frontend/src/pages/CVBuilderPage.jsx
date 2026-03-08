@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { FileText, Sparkles, Clock, Download, ChevronDown, ChevronUp, LayoutTemplate } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { FileText, Sparkles, Clock, Download, ChevronDown, ChevronUp, LayoutTemplate, ArrowLeft } from "lucide-react";
 import { createCVVersion, getCVVersions } from "../api/cvVersions";
 
 const TEMPLATES = [
@@ -111,6 +111,7 @@ function CVCard({ cv, defaultOpen = false }) {
 
 export default function CVBuilderPage() {
   const { applicationId } = useParams();
+  const navigate = useNavigate();
 
   const [jobAdText, setJobAdText] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("modern");
@@ -158,16 +159,26 @@ export default function CVBuilderPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-indigo-100 rounded-lg">
-          <FileText size={22} className="text-indigo-600" />
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-indigo-100 rounded-lg">
+            <FileText size={22} className="text-indigo-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">CV Builder</h1>
+            <p className="text-sm text-slate-500">
+              Paste a job advertisement and generate a tailored CV draft.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">CV Builder</h1>
-          <p className="text-sm text-slate-500">
-            Paste a job advertisement and generate a tailored CV draft.
-          </p>
-        </div>
+        <button
+          type="button"
+          onClick={() => navigate("/app/applications")}
+          className="btn-secondary"
+        >
+          <ArrowLeft size={16} />
+          Back to Applications
+        </button>
       </div>
 
       {/* Step 1 — Job ad */}
