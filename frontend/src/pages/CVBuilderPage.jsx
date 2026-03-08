@@ -82,7 +82,13 @@ function CVCard({ cv, defaultOpen = false }) {
           </div>
           <div>
             <SectionLabel>Skills</SectionLabel>
-            <p className="text-sm text-slate-700 leading-relaxed">{cv.cv_skills}</p>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {cv.cv_skills.split(",").map((s) => s.trim()).filter(Boolean).map((s) => (
+                <span key={s} className="bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs px-2.5 py-0.5 rounded-full font-medium">
+                  {s}
+                </span>
+              ))}
+            </div>
           </div>
           <div>
             <SectionLabel>Experience</SectionLabel>
@@ -277,7 +283,13 @@ export default function CVBuilderPage() {
             </div>
             <div>
               <SectionLabel>Skills</SectionLabel>
-              <p className="text-sm text-slate-700 leading-relaxed">{cvResult.cv_skills}</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {cvResult.cv_skills.split(",").map((s) => s.trim()).filter(Boolean).map((s) => (
+                  <span key={s} className="bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs px-2.5 py-0.5 rounded-full font-medium">
+                    {s}
+                  </span>
+                ))}
+              </div>
             </div>
             <div className="md:col-span-2">
               <SectionLabel>Experience</SectionLabel>

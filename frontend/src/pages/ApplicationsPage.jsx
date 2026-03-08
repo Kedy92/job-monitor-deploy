@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   Briefcase, Plus, RefreshCw, Trash2, FileText,
-  ExternalLink, Search, ChevronDown,
+  ExternalLink, Search, ChevronDown, Pencil, Check, X,
 } from "lucide-react";
 import {
   getApplicationStats,
@@ -66,6 +66,87 @@ function Banner({ type = "info", title, message, onClose }) {
   );
 }
 
+// Inline edit row — replaces the normal <tr> when editing
+function EditRow({ a, colSpan, onSave, onCancel }) {
+  const [jobTitle, setJobTitle]   = useState(a.job_title || "");
+  const [company, setCompany]     = useState(a.company || "");
+  const [jobUrl, setJobUrl]       = useState(a.job_url || "");
+  const [notes, setNotes]         = useState(a.notes || "");
+  const [appliedAt, setAppliedAt] = useState(a.applied_at || "");
+  const [saving, setSaving]       = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await onSave(a.id, {
+        job_title: jobTitle.trim(),
+        company: company.trim(),
+        job_url: jobUrl.trim() || null,
+        notes: notes.trim() || null,
+        applied_at: appliedAt || null,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <tr className="border-t border-indigo-100 bg-indigo-50/40">
+      <td colSpan={colSpan} className="px-6 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input
+            className="input"
+            placeholder="Job title *"
+            value={jobTitle}
+            onChange={(e) => setJobTitle(e.target.value)}
+          />
+          <input
+            className="input"
+            placeholder="Company *"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+          />
+          <input
+            className="input md:col-span-2"
+            placeholder="Job URL (optional)"
+            value={jobUrl}
+            onChange={(e) => setJobUrl(e.target.value)}
+          />
+          <div className="space-y-1">
+            <label className="text-xs text-slate-500">Date applied</label>
+            <input
+              type="date"
+              className="input"
+              value={appliedAt}
+              onChange={(e) => setAppliedAt(e.target.value)}
+            />
+          </div>
+          <textarea
+            className="input h-16 resize-none"
+            placeholder="Notes (optional)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={handleSave}
+            disabled={saving || !jobTitle.trim() || !company.trim()}
+            className="btn-primary py-1.5 px-4"
+          >
+            <Check size={14} />
+            {saving ? "Saving…" : "Save"}
+          </button>
+          <button onClick={onCancel} className="btn-secondary py-1.5 px-4">
+            <X size={14} />
+            Cancel
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 export default function ApplicationsPage() {
   const [items, setItems]           = useState([]);
   const [stats, setStats]           = useState({ total: 0, APPLIED: 0, INTERVIEW: 0, OFFER: 0, REJECTED: 0 });
@@ -88,6 +169,7 @@ export default function ApplicationsPage() {
   const [creating, setCreating]             = useState(false);
   const [refreshing, setRefreshing]         = useState(false);
   const [rowBusyId, setRowBusyId]           = useState(null);
+  const [editingId, setEditingId]           = useState(null);
 
   const safeSetBanner = (next) => {
     setBanner(next);
@@ -169,6 +251,18 @@ export default function ApplicationsPage() {
     }
   }
 
+  async function handleEdit(id, payload) {
+    try {
+      const updated = await updateApplication(id, payload);
+      setItems((prev) => prev.map((x) => (x.id === id ? updated : x)));
+      setEditingId(null);
+      safeSetBanner({ type: "success", title: "Application updated", message: "Changes saved." });
+    } catch (e) {
+      safeSetBanner({ type: "error", title: "Failed to update", message: e?.message || "Please try again." });
+      throw e;
+    }
+  }
+
   async function handleStatusChange(id, newStatus) {
     if (rowBusyId) return;
     setRowBusyId(id);
@@ -228,7 +322,7 @@ export default function ApplicationsPage() {
         <Banner type={banner.type} title={banner.title} message={banner.message} onClose={() => setBanner(null)} />
       )}
 
-      {/* Stats — from backend */}
+      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard label="Total"     value={stats.total}     color="indigo" />
         <StatCard label="Applied"   value={stats.APPLIED}   color="blue" />
@@ -317,8 +411,17 @@ export default function ApplicationsPage() {
                 const busy   = rowBusyId === a.id;
                 const url    = (a.job_url || "").trim();
                 const status = String(a.status || "APPLIED");
+                const isEditing = editingId === a.id;
 
-                return (
+                return isEditing ? (
+                  <EditRow
+                    key={a.id}
+                    a={a}
+                    colSpan={6}
+                    onSave={handleEdit}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ) : (
                   <tr key={a.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-medium text-slate-900">{a.job_title}</div>
@@ -369,20 +472,26 @@ export default function ApplicationsPage() {
 
                     <td className="px-6 py-4 text-right">
                       <div className="inline-flex items-center gap-2">
+                        <button
+                          onClick={() => setEditingId(a.id)}
+                          className="text-slate-400 hover:text-indigo-600 transition-colors p-1.5 rounded-lg hover:bg-indigo-50"
+                          title="Edit application"
+                        >
+                          <Pencil size={13} />
+                        </button>
                         <Link to={`/app/cv-builder/${a.id}`}>
                           <button className="btn-secondary py-1 px-2 text-xs">
-                            <FileText size={13} /> Generate CV
+                            <FileText size={13} /> CV
                           </button>
                         </Link>
                         {url && (
                           <a href={url} target="_blank" rel="noreferrer" className="btn-secondary py-1 px-2 text-xs">
-                            <ExternalLink size={13} /> Link
+                            <ExternalLink size={13} />
                           </a>
                         )}
                         <button type="button" onClick={() => handleDelete(a.id)}
                           disabled={busy} className="btn-danger py-1 px-2 text-xs">
                           <Trash2 size={13} />
-                          {busy ? "..." : "Delete"}
                         </button>
                       </div>
                     </td>
@@ -393,7 +502,7 @@ export default function ApplicationsPage() {
           </table>
         )}
 
-        {/* Pagination — load more */}
+        {/* Pagination */}
         {hasMore && !loading && (
           <div className="px-6 py-4 border-t border-slate-100 text-center">
             <button
