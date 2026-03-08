@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    name: str | None = None
 
 
 class UserRead(BaseModel):
@@ -13,4 +14,5 @@ class UserRead(BaseModel):
 
     id: int
     email: EmailStr
+    name: str | None = None
     created_at: datetime

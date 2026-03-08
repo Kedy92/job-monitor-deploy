@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.models.monitor import Monitor
+from app.models.monitor_run import MonitorRun
 from app.schemas.monitor import MonitorCreate, MonitorRead, MonitorUpdate
 from app.schemas.user import UserRead
 from app.services.monitors import (
@@ -55,6 +57,37 @@ def update_monitor_endpoint(
     if not updated:
         raise HTTPException(status_code=404, detail="Monitor not found")
     return updated
+
+
+@router.get("/{monitor_id}/runs")
+def get_monitor_runs(
+    monitor_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserRead = Depends(get_current_user),
+):
+    # Verify ownership
+    monitor = db.query(Monitor).filter(
+        Monitor.id == monitor_id, Monitor.user_id == current_user.id
+    ).first()
+    if not monitor:
+        raise HTTPException(status_code=404, detail="Monitor not found")
+
+    runs = (
+        db.query(MonitorRun)
+        .filter(MonitorRun.monitor_id == monitor_id)
+        .order_by(MonitorRun.checked_at.desc())
+        .limit(10)
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "checked_at": r.checked_at.isoformat(),
+            "status": r.status,
+            "message": r.message,
+        }
+        for r in runs
+    ]
 
 
 @router.delete("/{monitor_id}", status_code=status.HTTP_204_NO_CONTENT)

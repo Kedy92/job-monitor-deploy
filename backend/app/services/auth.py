@@ -16,7 +16,7 @@ def register(db: Session, payload: UserCreate) -> UserRead:
         # We raise a service-level error; router maps it to HTTP
         raise AuthError("email_already_registered")
 
-    user = create_user(db, payload.email, payload.password)
+    user = create_user(db, payload.email, payload.password, name=payload.name)
     return UserRead.model_validate(user)
 
 

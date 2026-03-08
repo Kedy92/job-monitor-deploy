@@ -15,8 +15,8 @@ def get_user_by_email(db: Session, email: str) -> User | None:
     return db.execute(stmt).scalar_one_or_none()
 
 
-def create_user(db: Session, email: str, password: str) -> User:
-    user = User(email=email, hashed_password=hash_password(password))
+def create_user(db: Session, email: str, password: str, name: str | None = None) -> User:
+    user = User(email=email, hashed_password=hash_password(password), name=name)
     db.add(user)
     db.commit()
     db.refresh(user)

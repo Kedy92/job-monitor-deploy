@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FileText, Sparkles, Clock, Download, ChevronDown, ChevronUp, LayoutTemplate, ArrowLeft } from "lucide-react";
-import { createCVVersion, getCVVersions } from "../api/cvVersions";
+import { createCVVersion, getCVVersions, downloadCV } from "../api/cvVersions";
 
 const TEMPLATES = [
   {
@@ -60,16 +60,14 @@ function CVCard({ cv, defaultOpen = false }) {
           <span className="text-xs text-slate-400 hidden sm:block">
             {new Date(cv.created_at).toLocaleDateString()}
           </span>
-          <a
-            href={`http://127.0.0.1:8000/cv-versions/${cv.id}/download`}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); downloadCV(cv.id); }}
             className="btn-secondary py-1 px-2 text-xs"
           >
             <Download size={12} />
             PDF
-          </a>
+          </button>
           {open ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
         </div>
       </div>

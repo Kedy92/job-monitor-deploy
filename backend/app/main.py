@@ -45,7 +45,7 @@ async def lifespan(app):
     # start scheduler
     scheduler.add_job(
         scheduler_job,
-        trigger=IntervalTrigger(seconds=30),  # change to minutes later
+        trigger=IntervalTrigger(minutes=settings.SCHEDULER_INTERVAL_MINUTES),
         id="monitor_checks",
         replace_existing=True,
     )

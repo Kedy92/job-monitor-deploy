@@ -15,3 +15,7 @@ export function updateMonitor(id, payload) {
 export function deleteMonitor(id) {
   return api.del(`/monitors/${id}`);
 }
+
+export function getMonitorRuns(id) {
+  return api.get(`/monitors/${id}/runs`);
+}

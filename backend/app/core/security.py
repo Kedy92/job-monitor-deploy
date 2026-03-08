@@ -12,7 +12,9 @@ from fastapi import HTTPException, status
 # IMPORTANT: keep this name exactly as below and never overwrite it
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
-SECRET_KEY = "dev-secret-change-later"
+from app.core.config import settings as _settings
+
+SECRET_KEY = _settings.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 

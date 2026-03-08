@@ -177,11 +177,16 @@ def create_cv_version(
 
 @router.get("/application/{application_id}")
 def list_cv_versions_for_application(
-    application_id: int, db: Session = Depends(get_db)
+    application_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
     return (
         db.query(CVVersion)
-        .filter(CVVersion.application_id == application_id)
+        .filter(
+            CVVersion.application_id == application_id,
+            CVVersion.user_id == current_user.id,
+        )
         .order_by(CVVersion.id.desc())
         .limit(5)
         .all()
@@ -189,8 +194,16 @@ def list_cv_versions_for_application(
 
 
 @router.get("/{cv_id}/download")
-def download_cv(cv_id: int, db: Session = Depends(get_db)):
-    cv = db.query(CVVersion).filter(CVVersion.id == cv_id).first()
+def download_cv(
+    cv_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    cv = (
+        db.query(CVVersion)
+        .filter(CVVersion.id == cv_id, CVVersion.user_id == current_user.id)
+        .first()
+    )
 
     if not cv:
         raise HTTPException(status_code=404, detail="CV not found")

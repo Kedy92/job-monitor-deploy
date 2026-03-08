@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     ANTHROPIC_API_KEY: str = ""
+    SECRET_KEY: str = "dev-secret-change-in-production"
+    SCHEDULER_INTERVAL_MINUTES: int = 5
 
 
 settings = Settings()
