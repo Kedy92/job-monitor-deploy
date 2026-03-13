@@ -1,28 +1,19 @@
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.routes.health import router as health_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.users import router as users_router
 from app.api.routes.monitors import router as monitors_router
-
 from app.routers.ai_tools import router as ai_router
-
 from app.routers.notifications_test import router as notifications_test_router
-
-from fastapi.middleware.cors import CORSMiddleware
-
-
-from contextlib import asynccontextmanager
-
 from app.api.routes.applications import router as applications_router
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-
 from app.db.session import SessionLocal
 from app.services.worker import run_monitor_checks
-
 from app.api.routes.cv_versions import router as cv_versions_router
 
 
@@ -41,8 +32,7 @@ scheduler = AsyncIOScheduler()
 
 
 @asynccontextmanager
-async def lifespan(app):
-    # start scheduler
+async def lifespan(app: FastAPI):
     scheduler.add_job(
         scheduler_job,
         trigger=IntervalTrigger(minutes=settings.SCHEDULER_INTERVAL_MINUTES),
@@ -58,21 +48,12 @@ async def lifespan(app):
     print("[scheduler] stopped")
 
 
-app = FastAPI(title=settings.APP_NAME)
-app = FastAPI(lifespan=lifespan)
-
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-    "http://localhost:80",
-    "http://localhost",
-]
+app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origin_regex=settings.BACKEND_CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

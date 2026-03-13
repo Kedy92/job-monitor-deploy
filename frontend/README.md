@@ -1,16 +1,72 @@
-# React + Vite
+# Job Monitor Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for the Job Monitor project.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Install dependencies:
 
-## React Compiler
+```bash
+npm ci
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Run the dev server:
 
-## Expanding the ESLint configuration
+```bash
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+By default, the frontend calls the backend at `http://127.0.0.1:8000` when `VITE_API_URL` is not set.
+
+## Docker mode
+
+The Docker frontend is built with:
+
+```text
+VITE_API_URL=""
+```
+
+That makes the app call relative paths like `/auth/login`, and Nginx proxies those requests to the backend container.
+
+## Vercel deployment
+
+Use these settings in Vercel:
+
+- Framework preset: `Vite`
+- Root directory: `frontend`
+- Build command: `npm run build`
+- Output directory: `dist`
+
+Set this environment variable in Vercel:
+
+```text
+VITE_API_URL=https://your-backend-domain.example.com
+```
+
+Notes:
+
+- Use an `https://` backend URL for production. A Vercel site served over HTTPS cannot safely call a plain `http://` backend.
+- `VITE_API_URL` must be the variable name. Do not use the backend URL as the key.
+- Preview deployments are supported by the backend CORS regex for `*.vercel.app`.
+
+## Backend CORS
+
+The backend supports:
+
+- explicit origins via `BACKEND_CORS_ORIGINS`
+- Vercel preview URLs via `BACKEND_CORS_ORIGIN_REGEX`
+
+Example backend env value:
+
+```text
+BACKEND_CORS_ORIGINS=["https://your-project.vercel.app"]
+```
+
+If you use a custom frontend domain, add that domain to `BACKEND_CORS_ORIGINS` too.
+
+## Verification
+
+```bash
+npm run lint
+npm run build
+```

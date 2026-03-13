@@ -1,5 +1,5 @@
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import requests
 from bs4 import BeautifulSoup
@@ -29,21 +29,48 @@ def _content_hash(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()[:16]
 
 
+def _get_last_run(db: Session, monitor_id: int) -> MonitorRun | None:
+    return (
+        db.query(MonitorRun)
+        .filter(MonitorRun.monitor_id == monitor_id)
+        .order_by(MonitorRun.checked_at.desc())
+        .first()
+    )
+
+
+def _is_due(last_run: MonitorRun | None, interval_minutes: int, now: datetime) -> bool:
+    if last_run is None:
+        return True
+
+    checked_at = last_run.checked_at
+    if checked_at.tzinfo is None:
+        checked_at = checked_at.replace(tzinfo=timezone.utc)
+
+    return now >= checked_at + timedelta(minutes=interval_minutes)
+
+
 def run_monitor_checks(db: Session) -> int:
     """
-    For each active monitor:
+    For each due active monitor:
       1. Fetch the target URL
       2. Extract text
       3. Run keyword match
       4. If score >= threshold AND content changed → send email
       5. Log a MonitorRun row
-    Returns number of monitors processed.
+    Returns number of monitors processed in this scheduler pass.
     """
     monitors = db.query(Monitor).filter(Monitor.active == True).all()  # noqa: E712
+    now = datetime.now(timezone.utc)
 
     notification_service = None  # lazy-init so missing SendGrid key doesn't crash on startup
+    processed_count = 0
 
     for m in monitors:
+        last_run = _get_last_run(db, m.id)
+        if not _is_due(last_run, m.interval_minutes, now):
+            continue
+
+        processed_count += 1
         status = "ok"
         message = "checked"
         result_hash = None
@@ -72,12 +99,6 @@ def run_monitor_checks(db: Session) -> int:
             message = f"score={score}% matched={matched} missing={missing}"
 
             # 4. Check if this is a new match worth notifying about
-            last_run = (
-                db.query(MonitorRun)
-                .filter(MonitorRun.monitor_id == m.id)
-                .order_by(MonitorRun.checked_at.desc())
-                .first()
-            )
             already_notified = last_run and last_run.result_hash == result_hash
 
             if score >= m.match_threshold and not already_notified:
@@ -124,13 +145,13 @@ def run_monitor_checks(db: Session) -> int:
         _log_run(db, m.id, status, message[:255], result_hash)
 
     db.commit()
-    return len(monitors)
+    return processed_count
 
 
 def _log_run(db: Session, monitor_id: int, status: str, message: str, result_hash: str | None):
     db.add(MonitorRun(
         monitor_id=monitor_id,
-        checked_at=datetime.now(),
+        checked_at=datetime.now(timezone.utc),
         status=status,
         message=message,
         result_hash=result_hash,

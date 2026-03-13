@@ -18,7 +18,7 @@ export default function ProtectedRoute({ children }) {
       try {
         await getMe();
         setIsValid(true);
-      } catch (err) {
+      } catch {
         clearToken();
         setIsValid(false);
       }

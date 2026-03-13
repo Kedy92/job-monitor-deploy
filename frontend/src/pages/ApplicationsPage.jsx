@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   Briefcase, Plus, RefreshCw, Trash2, FileText,
@@ -170,14 +170,15 @@ export default function ApplicationsPage() {
   const [refreshing, setRefreshing]         = useState(false);
   const [rowBusyId, setRowBusyId]           = useState(null);
   const [editingId, setEditingId]           = useState(null);
+  const bannerTimeoutRef = useRef(null);
 
-  const safeSetBanner = (next) => {
+  const safeSetBanner = useCallback((next) => {
     setBanner(next);
     if (next && next.type !== "error") {
-      window.clearTimeout(safeSetBanner._t);
-      safeSetBanner._t = window.setTimeout(() => setBanner(null), 3000);
+      window.clearTimeout(bannerTimeoutRef.current);
+      bannerTimeoutRef.current = window.setTimeout(() => setBanner(null), 3000);
     }
-  };
+  }, []);
 
   const loadStats = useCallback(async () => {
     try {
@@ -201,12 +202,13 @@ export default function ApplicationsPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [safeSetBanner]);
 
   useEffect(() => {
     loadPage(0);
     loadStats();
-  }, []);
+    return () => window.clearTimeout(bannerTimeoutRef.current);
+  }, [loadPage, loadStats]);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();

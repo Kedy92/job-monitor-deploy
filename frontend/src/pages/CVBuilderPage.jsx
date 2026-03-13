@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FileText, Sparkles, Clock, Download, ChevronDown, ChevronUp, LayoutTemplate, ArrowLeft } from "lucide-react";
 import { createCVVersion, getCVVersions, downloadCV } from "../api/cvVersions";
@@ -124,7 +124,7 @@ export default function CVBuilderPage() {
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
-  async function loadHistory() {
+  const loadHistory = useCallback(async () => {
     try {
       setLoadingHistory(true);
       const data = await getCVVersions(applicationId);
@@ -134,9 +134,9 @@ export default function CVBuilderPage() {
     } finally {
       setLoadingHistory(false);
     }
-  }
+  }, [applicationId]);
 
-  useEffect(() => { loadHistory(); }, [applicationId]);
+  useEffect(() => { loadHistory(); }, [loadHistory]);
 
   const handleGenerate = async () => {
     if (!jobAdText.trim()) {

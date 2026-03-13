@@ -1,6 +1,9 @@
 import { logoutToLogin, getToken } from "../services/token";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+const rawApiBase = import.meta.env.VITE_API_URL;
+const API_BASE = rawApiBase === undefined
+  ? "http://127.0.0.1:8000"
+  : rawApiBase.replace(/\/+$/, "");
 
 async function parseResponse(res) {
   const contentType = res.headers.get("content-type") || "";
