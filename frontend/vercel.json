@@ -1,9 +1,4 @@
 {
-  "build": {
-    "env": {
-      "VITE_API_URL": "https://api.jobmonitor.online"
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",
