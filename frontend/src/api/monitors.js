@@ -19,3 +19,7 @@ export function deleteMonitor(id) {
 export function getMonitorRuns(id) {
   return api.get(`/monitors/${id}/runs`);
 }
+
+export function runMonitorNow(id) {
+  return api.post(`/monitors/${id}/run`);
+}

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.models.monitor import Monitor
 from app.models.monitor_run import MonitorRun
-from app.schemas.monitor import MonitorCreate, MonitorRead, MonitorUpdate
+from app.schemas.monitor import MonitorCreate, MonitorRead, MonitorRunRead, MonitorUpdate
 from app.schemas.user import UserRead
 from app.services.monitors import (
     create_monitor,
@@ -12,6 +12,7 @@ from app.services.monitors import (
     list_monitors,
     update_monitor,
 )
+from app.services.worker import run_single_monitor_check
 
 router = APIRouter(prefix="/monitors", tags=["monitors"])
 
@@ -30,6 +31,8 @@ def create_monitor_endpoint(
         monitor_type=payload.monitor_type,
         interval_minutes=payload.interval_minutes,
         active=payload.active,
+        keywords=payload.keywords,
+        match_threshold=payload.match_threshold,
     )
 
 
@@ -59,7 +62,7 @@ def update_monitor_endpoint(
     return updated
 
 
-@router.get("/{monitor_id}/runs")
+@router.get("/{monitor_id}/runs", response_model=list[MonitorRunRead])
 def get_monitor_runs(
     monitor_id: int,
     db: Session = Depends(get_db),
@@ -79,15 +82,31 @@ def get_monitor_runs(
         .limit(10)
         .all()
     )
-    return [
-        {
-            "id": r.id,
-            "checked_at": r.checked_at.isoformat(),
-            "status": r.status,
-            "message": r.message,
-        }
-        for r in runs
-    ]
+    return runs
+
+
+@router.post("/{monitor_id}/run", response_model=MonitorRunRead)
+def run_monitor_now(
+    monitor_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserRead = Depends(get_current_user),
+):
+    monitor = db.query(Monitor).filter(
+        Monitor.id == monitor_id, Monitor.user_id == current_user.id
+    ).first()
+    if not monitor:
+        raise HTTPException(status_code=404, detail="Monitor not found")
+
+    last_run = (
+        db.query(MonitorRun)
+        .filter(MonitorRun.monitor_id == monitor_id)
+        .order_by(MonitorRun.checked_at.desc())
+        .first()
+    )
+    run = run_single_monitor_check(db, monitor, last_run=last_run)
+    db.commit()
+    db.refresh(run)
+    return run
 
 
 @router.delete("/{monitor_id}", status_code=status.HTTP_204_NO_CONTENT)

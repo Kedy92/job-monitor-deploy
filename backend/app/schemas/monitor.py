@@ -37,3 +37,14 @@ class MonitorRead(BaseModel):
     created_at: datetime
     keywords: Optional[str] = ""
     match_threshold: int = 60
+
+
+class MonitorRunRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    monitor_id: int
+    checked_at: datetime
+    status: str
+    message: Optional[str] = None
+    result_hash: Optional[str] = None

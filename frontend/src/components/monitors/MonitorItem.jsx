@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Trash2, Tag, ExternalLink, Pencil, Check, X, History } from "lucide-react";
-import { getMonitorRuns } from "../../api/monitors";
+import { Trash2, Tag, ExternalLink, Pencil, Check, X, History, Play } from "lucide-react";
+import { getMonitorRuns, runMonitorNow } from "../../api/monitors";
 
 const MONITOR_TYPES = [
   { value: "job", label: "Job" },
@@ -40,6 +40,7 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
   const [saving, setSaving] = useState(false);
   const [showRuns, setShowRuns] = useState(false);
   const [runs, setRuns] = useState(null);
+  const [running, setRunning] = useState(false);
 
   const [name, setName] = useState(monitor.name);
   const [targetUrl, setTargetUrl] = useState(monitor.target_url);
@@ -59,6 +60,17 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
       setRuns(data);
     }
     setShowRuns((v) => !v);
+  }
+
+  async function handleRunNow() {
+    setRunning(true);
+    try {
+      const run = await runMonitorNow(monitor.id);
+      setRuns((prev) => [run, ...(prev || [])].slice(0, 10));
+      setShowRuns(true);
+    } finally {
+      setRunning(false);
+    }
   }
 
   function handleCancel() {
@@ -216,6 +228,14 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
 
         {/* Right: actions */}
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleRunNow}
+            disabled={running}
+            className="text-slate-400 hover:text-emerald-600 transition-colors p-1.5 rounded-lg hover:bg-emerald-50 disabled:opacity-50"
+            title="Run check now"
+          >
+            <Play size={14} className={running ? "animate-pulse" : ""} />
+          </button>
           <button
             onClick={handleToggleRuns}
             className="text-slate-400 hover:text-indigo-600 transition-colors p-1.5 rounded-lg hover:bg-indigo-50"

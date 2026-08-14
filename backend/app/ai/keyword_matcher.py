@@ -1,5 +1,4 @@
 import re
-from collections import Counter
 
 
 STOP_WORDS = {
@@ -28,24 +27,37 @@ STOP_WORDS = {
 }
 
 
-def clean_text(text: str) -> list[str]:
+def normalize_text(text: str) -> str:
     text = text.lower()
-    text = re.sub(r"[^a-zA-Z0-9\s]", "", text)
+    text = re.sub(r"[^a-z0-9+#.\s-]", " ", text)
+    return " ".join(text.split())
+
+
+def clean_text(text: str) -> list[str]:
+    text = normalize_text(text)
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
     words = text.split()
     return [w for w in words if w not in STOP_WORDS and len(w) > 2]
 
 
 def calculate_match(job_description: str, profile_keywords: list[str]):
-    job_words = clean_text(job_description)
-    job_counter = Counter(job_words)
-
-    profile_keywords = [k.lower() for k in profile_keywords]
+    normalized_description = normalize_text(job_description)
+    job_words = set(clean_text(job_description))
+    profile_keywords = [normalize_text(k) for k in profile_keywords if normalize_text(k)]
 
     matched = []
     missing = []
 
     for keyword in profile_keywords:
-        if keyword in job_counter:
+        if " " in keyword:
+            found = keyword in normalized_description
+        else:
+            found = keyword in job_words or re.search(
+                rf"(?<![a-z0-9]){re.escape(keyword)}(?![a-z0-9])",
+                normalized_description,
+            )
+
+        if found:
             matched.append(keyword)
         else:
             missing.append(keyword)

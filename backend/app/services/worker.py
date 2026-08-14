@@ -62,7 +62,6 @@ def run_monitor_checks(db: Session) -> int:
     monitors = db.query(Monitor).filter(Monitor.active == True).all()  # noqa: E712
     now = datetime.now(timezone.utc)
 
-    notification_service = None  # lazy-init so missing SendGrid key doesn't crash on startup
     processed_count = 0
 
     for m in monitors:
@@ -71,88 +70,110 @@ def run_monitor_checks(db: Session) -> int:
             continue
 
         processed_count += 1
-        status = "ok"
-        message = "checked"
-        result_hash = None
-
-        try:
-            # 1. Parse keywords from the monitor
-            raw_keywords = m.keywords or ""
-            keywords = [k.strip() for k in raw_keywords.split(",") if k.strip()]
-
-            if not keywords:
-                # No keywords configured — just mark as checked
-                message = "no keywords configured"
-                _log_run(db, m.id, status, message, result_hash)
-                continue
-
-            # 2. Scrape the page
-            page_text = _fetch_page_text(m.target_url)
-            result_hash = _content_hash(page_text)
-
-            # 3. Run keyword match
-            match = calculate_match(page_text, keywords)
-            score = match["score"]
-            matched = match["matched_keywords"]
-            missing = match["missing_keywords"]
-
-            message = f"score={score}% matched={matched} missing={missing}"
-
-            # 4. Check if this is a new match worth notifying about
-            already_notified = last_run and last_run.result_hash == result_hash
-
-            if score >= m.match_threshold and not already_notified:
-                status = "match"
-                # 5. Send email — look up user email
-                user = db.query(User).filter(User.id == m.user_id).first()
-                if user:
-                    try:
-                        if notification_service is None:
-                            notification_service = NotificationService()
-
-                        summary = (
-                            f"Score: {score}% | "
-                            f"Matched: {', '.join(matched) or 'none'} | "
-                            f"Missing: {', '.join(missing) or 'none'}"
-                        )
-                        result = notification_service.send_match_email_direct(
-                            to_email=user.email,
-                            monitor_name=m.name,
-                            target_url=m.target_url,
-                            match_summary=summary,
-                        )
-                        if result and result.ok:
-                            print(f"[worker] Email sent to {user.email} for monitor '{m.name}'")
-                        else:
-                            print(f"[worker] Email failed for monitor '{m.name}': {result}")
-                    except Exception as e:
-                        print(f"[worker] Notification error for monitor {m.id}: {e}")
-            elif score >= m.match_threshold and already_notified:
-                status = "match"
-                message += " (already notified, no new email)"
-            else:
-                status = "no_match"
-
-        except requests.exceptions.RequestException as e:
-            status = "error"
-            message = f"fetch error: {e}"
-            print(f"[worker] Fetch error for monitor {m.id} ({m.target_url}): {e}")
-        except Exception as e:
-            status = "error"
-            message = f"error: {e}"
-            print(f"[worker] Error for monitor {m.id}: {e}")
-
-        _log_run(db, m.id, status, message[:255], result_hash)
+        run_single_monitor_check(db, m, last_run=last_run)
 
     db.commit()
     return processed_count
 
 
-def _log_run(db: Session, monitor_id: int, status: str, message: str, result_hash: str | None):
-    db.add(MonitorRun(
+def run_single_monitor_check(
+    db: Session,
+    monitor: Monitor,
+    *,
+    last_run: MonitorRun | None = None,
+) -> MonitorRun:
+    status = "ok"
+    message = "checked"
+    result_hash = None
+
+    try:
+        raw_keywords = monitor.keywords or ""
+        keywords = [k.strip() for k in raw_keywords.split(",") if k.strip()]
+
+        if not keywords:
+            return _log_run(db, monitor.id, status, "no keywords configured", result_hash)
+
+        page_text = _fetch_page_text(monitor.target_url)
+        result_hash = _content_hash(page_text)
+
+        match = calculate_match(page_text, keywords)
+        score = match["score"]
+        matched = match["matched_keywords"]
+        missing = match["missing_keywords"]
+
+        message = (
+            f"score={score}% "
+            f"matched={', '.join(matched) or 'none'} "
+            f"missing={', '.join(missing) or 'none'}"
+        )
+
+        already_notified = last_run and last_run.result_hash == result_hash
+
+        if score >= monitor.match_threshold and not already_notified:
+            status = "match"
+            user = db.query(User).filter(User.id == monitor.user_id).first()
+            if user:
+                _send_match_notification(user, monitor, score, matched, missing)
+        elif score >= monitor.match_threshold and already_notified:
+            status = "match"
+            message += " (already notified, no new email)"
+        else:
+            status = "no_match"
+
+    except requests.exceptions.RequestException as e:
+        status = "error"
+        message = f"fetch error: {e}"
+        print(f"[worker] Fetch error for monitor {monitor.id} ({monitor.target_url}): {e}")
+    except Exception as e:
+        status = "error"
+        message = f"error: {e}"
+        print(f"[worker] Error for monitor {monitor.id}: {e}")
+
+    return _log_run(db, monitor.id, status, message[:255], result_hash)
+
+
+def _send_match_notification(
+    user: User,
+    monitor: Monitor,
+    score: int,
+    matched: list[str],
+    missing: list[str],
+) -> None:
+    try:
+        summary = (
+            f"Score: {score}% | "
+            f"Matched: {', '.join(matched) or 'none'} | "
+            f"Missing: {', '.join(missing) or 'none'}"
+        )
+        result = NotificationService().send_match_email_direct(
+            to_email=user.email,
+            monitor_name=monitor.name,
+            target_url=monitor.target_url,
+            match_summary=summary,
+        )
+        if result and result.ok:
+            print(f"[worker] Email sent to {user.email} for monitor '{monitor.name}'")
+        else:
+            print(f"[worker] Email failed for monitor '{monitor.name}': {result}")
+    except Exception as e:
+        print(f"[worker] Notification error for monitor {monitor.id}: {e}")
+
+
+def _log_run(
+    db: Session,
+    monitor_id: int,
+    status: str,
+    message: str,
+    result_hash: str | None,
+) -> MonitorRun:
+    run = MonitorRun(
         monitor_id=monitor_id,
         checked_at=datetime.now(timezone.utc),
         status=status,
         message=message,
         result_hash=result_hash,
-    ))
+    )
+    db.add(run)
+    db.flush()
+    db.refresh(run)
+    return run
