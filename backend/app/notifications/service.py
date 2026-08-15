@@ -1,12 +1,20 @@
 from typing import Optional
 from fastapi import BackgroundTasks
+import os
 
 from app.notifications.provider_sendgrid import SendGridEmailProvider, SendEmailResult
+from app.notifications.provider_smtp import SMTPEmailProvider
 
 
 class NotificationService:
     def __init__(self) -> None:
-        self.email_provider = SendGridEmailProvider()
+        provider = (os.getenv("EMAIL_PROVIDER") or "sendgrid").strip().lower()
+        if provider == "smtp":
+            self.email_provider = SMTPEmailProvider()
+        elif provider == "sendgrid":
+            self.email_provider = SendGridEmailProvider()
+        else:
+            raise RuntimeError(f"Unsupported EMAIL_PROVIDER: {provider}")
 
     def _build_html(self, monitor_name: str, target_url: str, match_summary: str) -> tuple[str, str]:
         subject = f"Job Monitor: match found for '{monitor_name}'"
