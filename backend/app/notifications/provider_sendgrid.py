@@ -15,11 +15,13 @@ class SendEmailResult:
 
 class SendGridEmailProvider:
     def __init__(self) -> None:
-        api_key = os.getenv("SENDGRID_API_KEY")
-        from_email = os.getenv("FROM_EMAIL")
+        api_key = (os.getenv("SENDGRID_API_KEY") or "").strip()
+        from_email = (os.getenv("FROM_EMAIL") or "").strip()
 
         if not api_key:
             raise RuntimeError("SENDGRID_API_KEY is missing")
+        if not api_key.startswith("SG."):
+            raise RuntimeError("SENDGRID_API_KEY is not a valid SendGrid API key")
         if not from_email:
             raise RuntimeError("FROM_EMAIL is missing")
 
