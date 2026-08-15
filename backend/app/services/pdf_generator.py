@@ -44,6 +44,12 @@ def generate_cv_pdf(cv):
     write_block("Summary", cv.cv_summary)
     write_block("Skills", cv.cv_skills)
     write_block("Experience", cv.cv_experience)
+    if getattr(cv, "cover_letter", None):
+        write_block("Cover Letter Draft", cv.cover_letter)
+    if getattr(cv, "interview_questions", None):
+        write_block("Interview Prep Questions", cv.interview_questions)
+    if getattr(cv, "improvement_suggestions", None):
+        write_block("Improvement Suggestions", cv.improvement_suggestions)
     write_block("Missing Keywords", cv.missing_keywords or "None")
 
     pdf.save()

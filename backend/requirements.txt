@@ -42,5 +42,6 @@ requests
 beautifulsoup4
 sendgrid
 anthropic
+openai
 pytest
 httpx

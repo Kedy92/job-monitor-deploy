@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     ENV: str = "dev"
 
     DATABASE_URL: str
+    AI_PROVIDER: str = "openai"
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-5-mini"
     ANTHROPIC_API_KEY: str = ""
     SECRET_KEY: str = "dev-secret-change-in-production"
     SCHEDULER_INTERVAL_MINUTES: int = 5

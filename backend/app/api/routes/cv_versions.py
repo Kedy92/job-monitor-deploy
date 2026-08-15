@@ -1,5 +1,6 @@
 import json
 import re
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -14,43 +15,160 @@ from app.services.pdf_generator import generate_cv_pdf
 
 router = APIRouter(prefix="/cv-versions", tags=["cv-versions"])
 
+DEFAULT_CANDIDATE_PROFILE = (
+    "Junior full-stack developer with practical project experience in Python, "
+    "FastAPI, React, SQL/PostgreSQL, Docker, REST APIs, authentication, deployment, "
+    "and AI-assisted development workflows."
+)
 
-def _call_claude(job_ad_text: str, job_title: str, company: str, template_name: str) -> dict:
-    """
-    Call Claude API to generate tailored CV content and ATS analysis.
-    Returns a dict with: summary, skills, experience, ats_score, missing_keywords.
-    Falls back to simple heuristics if the API key is not configured.
-    """
-    if not settings.ANTHROPIC_API_KEY or settings.ANTHROPIC_API_KEY == "your_anthropic_api_key_here":
-        return _fallback_generate(job_ad_text, job_title, company)
 
-    import anthropic
+CV_PACKAGE_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "summary": {"type": "string"},
+        "skills": {"type": "string"},
+        "experience": {"type": "string"},
+        "cover_letter": {"type": "string"},
+        "interview_questions": {"type": "string"},
+        "improvement_suggestions": {"type": "string"},
+        "ats_score": {"type": "integer", "minimum": 0, "maximum": 100},
+        "missing_keywords": {"type": "string"},
+    },
+    "required": [
+        "summary",
+        "skills",
+        "experience",
+        "cover_letter",
+        "interview_questions",
+        "improvement_suggestions",
+        "ats_score",
+        "missing_keywords",
+    ],
+}
 
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
-    prompt = f"""You are an expert CV writer and ATS (Applicant Tracking System) specialist.
+def _normalize_ai_result(data: dict[str, Any], provider: str) -> dict:
+    return {
+        "summary": str(data.get("summary", "")).strip(),
+        "skills": str(data.get("skills", "")).strip(),
+        "experience": str(data.get("experience", "")).strip(),
+        "cover_letter": str(data.get("cover_letter", "")).strip(),
+        "interview_questions": str(data.get("interview_questions", "")).strip(),
+        "improvement_suggestions": str(data.get("improvement_suggestions", "")).strip(),
+        "ats_score": max(0, min(100, int(data.get("ats_score", 50)))),
+        "missing_keywords": str(data.get("missing_keywords", "")).strip(),
+        "provider": provider,
+    }
 
-A candidate is applying for: **{job_title}** at **{company}**.
-CV template style requested: **{template_name}**
 
-Here is the full job advertisement:
+def _build_cv_prompt(
+    job_ad_text: str,
+    job_title: str,
+    company: str,
+    template_name: str,
+    candidate_profile: str,
+) -> str:
+    return f"""You are an expert CV writer, recruiter, and ATS specialist.
+
+Candidate target role: {job_title}
+Company: {company}
+Template style: {template_name}
+
+Candidate profile:
+---
+{candidate_profile}
+---
+
+Job advertisement:
 ---
 {job_ad_text}
 ---
 
-Your task is to generate tailored CV content for this specific job. The candidate has a background in Python/FastAPI backend development, React frontend, SQL databases, Docker, and REST APIs.
+Create a tailored application package. Be specific to the job advertisement and candidate profile.
 
-Respond ONLY with a valid JSON object (no markdown, no extra text) with exactly these keys:
+Rules:
+- Do not invent degrees, employers, certifications, dates, or seniority that the candidate profile does not support.
+- Make the CV content strong but honest for a junior/early-career developer if the profile indicates that level.
+- "skills" must be a comma-separated list of 10-14 relevant skills.
+- "experience" must be 3-5 concise CV bullets separated by newlines.
+- "cover_letter" must be 2-4 short paragraphs.
+- "interview_questions" must be 6 practical questions, one per line.
+- "improvement_suggestions" must be 4-6 concrete actions, one per line.
+- "missing_keywords" must be a comma-separated list of important job-ad keywords not strongly covered by the candidate profile.
+- Return only valid JSON matching the requested schema."""
 
-{{
-  "summary": "<2-3 sentence professional summary tailored to this role and company. Mention the role and company by name. Highlight the most relevant skills from the job ad.>",
-  "skills": "<comma-separated list of 8-12 technical skills most relevant to this job ad, ordered by relevance>",
-  "experience": "<2-3 sentences describing experience highlights most relevant to this job ad. Focus on what the employer is looking for.>",
-  "ats_score": <integer 0-100 representing how well the candidate profile matches the job ad keywords>,
-  "missing_keywords": "<comma-separated list of up to 10 important keywords/skills from the job ad that the candidate should address or learn>"
-}}
 
-Be specific, professional, and tailor every word to the actual job advertisement content. Do not use generic filler text."""
+def _parse_json_text(text: str) -> dict | None:
+    text = re.sub(r"```(?:json)?", "", text).strip()
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+    return None
+
+
+def _call_openai(
+    job_ad_text: str,
+    job_title: str,
+    company: str,
+    template_name: str,
+    candidate_profile: str,
+) -> dict | None:
+    if not settings.OPENAI_API_KEY:
+        return None
+
+    from openai import OpenAI
+
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    prompt = _build_cv_prompt(job_ad_text, job_title, company, template_name, candidate_profile)
+
+    response = client.responses.create(
+        model=settings.OPENAI_MODEL,
+        input=[
+            {
+                "role": "system",
+                "content": (
+                    "You generate honest, ATS-aware job application material. "
+                    "Output must be strict JSON only."
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ],
+        text={
+            "format": {
+                "type": "json_schema",
+                "name": "cv_application_package",
+                "schema": CV_PACKAGE_SCHEMA,
+                "strict": True,
+            }
+        },
+    )
+
+    data = _parse_json_text(response.output_text)
+    if data is None:
+        return None
+
+    return _normalize_ai_result(data, "openai")
+
+
+def _call_claude(
+    job_ad_text: str,
+    job_title: str,
+    company: str,
+    template_name: str,
+    candidate_profile: str,
+) -> dict | None:
+    if not settings.ANTHROPIC_API_KEY or settings.ANTHROPIC_API_KEY == "your_anthropic_api_key_here":
+        return None
+
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    prompt = _build_cv_prompt(job_ad_text, job_title, company, template_name, candidate_profile)
 
     response = client.messages.create(
         model="claude-opus-4-6",
@@ -66,31 +184,48 @@ Be specific, professional, and tailor every word to the actual job advertisement
             text = block.text
             break
 
-    # Parse JSON from the response
-    # Strip any accidental markdown code fences
-    text = re.sub(r"```(?:json)?", "", text).strip()
+    data = _parse_json_text(text)
+    if data is None:
+        return None
 
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        # Try to extract JSON object from the text
-        match = re.search(r"\{.*\}", text, re.DOTALL)
-        if match:
-            data = json.loads(match.group())
-        else:
-            return _fallback_generate(job_ad_text, job_title, company)
+    return _normalize_ai_result(data, "anthropic")
 
-    return {
-        "summary": str(data.get("summary", "")),
-        "skills": str(data.get("skills", "")),
-        "experience": str(data.get("experience", "")),
-        "ats_score": int(data.get("ats_score", 50)),
-        "missing_keywords": str(data.get("missing_keywords", "")),
+
+def _generate_cv_package(
+    job_ad_text: str,
+    job_title: str,
+    company: str,
+    template_name: str,
+    candidate_profile: str,
+) -> dict:
+    provider = settings.AI_PROVIDER.lower().strip()
+
+    providers = {
+        "openai": _call_openai,
+        "anthropic": _call_claude,
     }
+    ordered = [provider] if provider in providers else []
+    ordered += [name for name in providers if name not in ordered]
+
+    for name in ordered:
+        try:
+            result = providers[name](
+                job_ad_text,
+                job_title,
+                company,
+                template_name,
+                candidate_profile,
+            )
+            if result:
+                return result
+        except Exception:
+            continue
+
+    return _fallback_generate(job_ad_text, job_title, company, candidate_profile)
 
 
-def _fallback_generate(job_ad_text: str, job_title: str, company: str) -> dict:
-    """Simple keyword-based fallback when Claude API is not configured."""
+def _fallback_generate(job_ad_text: str, job_title: str, company: str, candidate_profile: str) -> dict:
+    """Simple keyword-based fallback when no AI provider is configured."""
     keyword_pool = [
         "python", "fastapi", "django", "flask", "react", "javascript",
         "typescript", "sql", "postgresql", "mysql", "docker", "aws",
@@ -102,7 +237,9 @@ def _fallback_generate(job_ad_text: str, job_title: str, company: str) -> dict:
     text_lower = job_ad_text.lower()
     matched = [kw for kw in keyword_pool if kw in text_lower]
     missing = [kw for kw in keyword_pool if kw not in text_lower]
-    ats_score = int(len(matched) / len(keyword_pool) * 100)
+    profile_lower = candidate_profile.lower()
+    candidate_matches = [kw for kw in matched if kw in profile_lower]
+    ats_score = int((len(candidate_matches) / max(len(matched), 1)) * 100) if matched else 50
 
     featured = ", ".join(matched[:4]) if matched else "software development"
     summary = (
@@ -111,18 +248,51 @@ def _fallback_generate(job_ad_text: str, job_title: str, company: str) -> dict:
         f"with practical experience in backend development, APIs, and modern web technologies."
     )
     skills = ", ".join([kw.title() for kw in matched[:8]] + ["Python", "FastAPI", "React", "Docker"])
-    experience = (
-        f"Experience aligned with {job_title} responsibilities, "
-        f"including {featured}. Strong background in building REST APIs, "
-        f"working with databases, and delivering production-ready software."
+    experience = "\n".join(
+        [
+            f"Built full-stack web features aligned with {job_title} responsibilities, including {featured}.",
+            "Implemented FastAPI endpoints, SQL persistence, authentication, and React interfaces.",
+            "Used Docker and cloud deployment workflows to run production-style services.",
+        ]
+    )
+    cover_letter = (
+        f"Dear {company} team,\n\n"
+        f"I am interested in the {job_title} role because it matches my practical experience "
+        f"with {featured}. I have worked on full-stack projects using FastAPI, React, SQL, "
+        "Docker, and deployment workflows, and I enjoy building useful products that solve "
+        "real user problems.\n\n"
+        "I would be glad to discuss how my project experience and willingness to learn can "
+        "support your team."
+    )
+    questions = "\n".join(
+        [
+            f"Which parts of the {job_title} role are most important during the first months?",
+            "How does the team structure backend and frontend collaboration?",
+            "What deployment and monitoring practices are used in production?",
+            "Which technical skills should a new developer strengthen first?",
+            "How is code quality reviewed in the team?",
+            "What would make a junior developer successful in this role?",
+        ]
+    )
+    suggestions = "\n".join(
+        [
+            "Add concrete project metrics where possible.",
+            "Prepare a short explanation of the FastAPI and React architecture.",
+            "Map each required keyword to a real project example.",
+            "Strengthen any missing database, cloud, or testing keywords before applying.",
+        ]
     )
 
     return {
         "summary": summary,
         "skills": skills,
         "experience": experience,
+        "cover_letter": cover_letter,
+        "interview_questions": questions,
+        "improvement_suggestions": suggestions,
         "ats_score": ats_score,
         "missing_keywords": ", ".join(missing[:10]),
+        "provider": "fallback",
     }
 
 
@@ -147,15 +317,14 @@ def create_cv_version(
     job_title = application.job_title or "the role"
     company = application.company or "the company"
 
-    try:
-        result = _call_claude(
-            job_ad_text=payload.job_ad_text,
-            job_title=job_title,
-            company=company,
-            template_name=payload.template_name or "Modern",
-        )
-    except Exception:
-        result = _fallback_generate(payload.job_ad_text, job_title, company)
+    candidate_profile = payload.candidate_profile or DEFAULT_CANDIDATE_PROFILE
+    result = _generate_cv_package(
+        job_ad_text=payload.job_ad_text,
+        job_title=job_title,
+        company=company,
+        template_name=payload.template_name or "Modern",
+        candidate_profile=candidate_profile,
+    )
 
     cv_row = CVVersion(
         user_id=current_user.id,
@@ -165,6 +334,10 @@ def create_cv_version(
         cv_summary=result["summary"],
         cv_skills=result["skills"],
         cv_experience=result["experience"],
+        cover_letter=result["cover_letter"],
+        interview_questions=result["interview_questions"],
+        improvement_suggestions=result["improvement_suggestions"],
+        ai_provider=result["provider"],
         ats_score=result["ats_score"],
         missing_keywords=result["missing_keywords"],
     )

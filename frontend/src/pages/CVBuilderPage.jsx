@@ -3,6 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FileText, Sparkles, Clock, Download, ChevronDown, ChevronUp, LayoutTemplate, ArrowLeft } from "lucide-react";
 import { createCVVersion, getCVVersions, downloadCV } from "../api/cvVersions";
 
+const DEFAULT_PROFILE = [
+  "Junior full-stack developer with practical experience in Python, FastAPI, React, SQL/PostgreSQL, Docker, REST APIs, authentication, deployment, and AI-assisted development workflows.",
+  "Built Job Monitor as a deployed SaaS-style project with a React frontend, FastAPI backend, PostgreSQL database, Docker deployment on AWS EC2, monitor scheduling, scraping, and AI-assisted CV tools.",
+].join("\n");
+
 const TEMPLATES = [
   {
     id: "modern",
@@ -41,6 +46,16 @@ function SectionLabel({ children }) {
   );
 }
 
+function TextBlock({ title, children, className = "" }) {
+  if (!children) return null;
+  return (
+    <div className={className}>
+      <SectionLabel>{title}</SectionLabel>
+      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{children}</p>
+    </div>
+  );
+}
+
 function CVCard({ cv, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -55,6 +70,11 @@ function CVCard({ cv, defaultOpen = false }) {
           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ATS_COLOR(cv.ats_score)}`}>
             ATS {cv.ats_score}%
           </span>
+          {cv.ai_provider && (
+            <span className="hidden sm:inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">
+              {cv.ai_provider}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-400 hidden sm:block">
@@ -74,10 +94,7 @@ function CVCard({ cv, defaultOpen = false }) {
 
       {open && (
         <div className="px-5 pb-5 pt-1 border-t border-slate-100 space-y-4">
-          <div>
-            <SectionLabel>Summary</SectionLabel>
-            <p className="text-sm text-slate-700 leading-relaxed">{cv.cv_summary}</p>
-          </div>
+          <TextBlock title="Summary">{cv.cv_summary}</TextBlock>
           <div>
             <SectionLabel>Skills</SectionLabel>
             <div className="flex flex-wrap gap-2 mt-1">
@@ -88,10 +105,10 @@ function CVCard({ cv, defaultOpen = false }) {
               ))}
             </div>
           </div>
-          <div>
-            <SectionLabel>Experience</SectionLabel>
-            <p className="text-sm text-slate-700 leading-relaxed">{cv.cv_experience}</p>
-          </div>
+          <TextBlock title="Experience">{cv.cv_experience}</TextBlock>
+          <TextBlock title="Cover Letter Draft">{cv.cover_letter}</TextBlock>
+          <TextBlock title="Interview Prep Questions">{cv.interview_questions}</TextBlock>
+          <TextBlock title="Improvement Suggestions">{cv.improvement_suggestions}</TextBlock>
           {cv.missing_keywords && (
             <div>
               <SectionLabel>Missing Keywords</SectionLabel>
@@ -118,6 +135,7 @@ export default function CVBuilderPage() {
   const navigate = useNavigate();
 
   const [jobAdText, setJobAdText] = useState("");
+  const [candidateProfile, setCandidateProfile] = useState(DEFAULT_PROFILE);
   const [selectedTemplate, setSelectedTemplate] = useState("modern");
   const [cvResult, setCvResult] = useState(null);
   const [history, setHistory] = useState([]);
@@ -148,6 +166,7 @@ export default function CVBuilderPage() {
       const result = await createCVVersion({
         application_id: Number(applicationId),
         job_ad_text: jobAdText,
+        candidate_profile: candidateProfile,
         template_name: selectedTemplate,
       });
       setCvResult(result);
@@ -200,10 +219,25 @@ export default function CVBuilderPage() {
         />
       </div>
 
-      {/* Step 2 — Template */}
+      {/* Step 2 — Candidate profile */}
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2 text-base font-semibold text-slate-900">
           <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+          Candidate profile
+        </div>
+        <textarea
+          placeholder="Describe your skills, projects, technologies, and strengths..."
+          value={candidateProfile}
+          onChange={(e) => setCandidateProfile(e.target.value)}
+          rows={6}
+          className="input resize-none"
+        />
+      </div>
+
+      {/* Step 3 — Template */}
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center gap-2 text-base font-semibold text-slate-900">
+          <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">3</span>
           <LayoutTemplate size={16} className="text-indigo-600" />
           Choose a template
         </div>
@@ -233,10 +267,10 @@ export default function CVBuilderPage() {
         </div>
       </div>
 
-      {/* Step 3 — Generate */}
+      {/* Step 4 — Generate */}
       <div className="card p-6 space-y-4">
         <div className="flex items-center gap-2 text-base font-semibold text-slate-900">
-          <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+          <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">4</span>
           Generate
         </div>
 
@@ -275,10 +309,7 @@ export default function CVBuilderPage() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <SectionLabel>Summary</SectionLabel>
-              <p className="text-sm text-slate-700 leading-relaxed">{cvResult.cv_summary}</p>
-            </div>
+            <TextBlock title="Summary">{cvResult.cv_summary}</TextBlock>
             <div>
               <SectionLabel>Skills</SectionLabel>
               <div className="flex flex-wrap gap-2 mt-1">
@@ -289,10 +320,10 @@ export default function CVBuilderPage() {
                 ))}
               </div>
             </div>
-            <div className="md:col-span-2">
-              <SectionLabel>Experience</SectionLabel>
-              <p className="text-sm text-slate-700 leading-relaxed">{cvResult.cv_experience}</p>
-            </div>
+            <TextBlock title="Experience" className="md:col-span-2">{cvResult.cv_experience}</TextBlock>
+            <TextBlock title="Cover Letter Draft" className="md:col-span-2">{cvResult.cover_letter}</TextBlock>
+            <TextBlock title="Interview Prep Questions">{cvResult.interview_questions}</TextBlock>
+            <TextBlock title="Improvement Suggestions">{cvResult.improvement_suggestions}</TextBlock>
             {cvResult.missing_keywords && (
               <div className="md:col-span-2">
                 <SectionLabel>Missing Keywords</SectionLabel>
@@ -306,6 +337,12 @@ export default function CVBuilderPage() {
               </div>
             )}
           </div>
+
+          {cvResult.ai_provider && (
+            <div className="text-xs text-slate-400">
+              Generated with provider: {cvResult.ai_provider}
+            </div>
+          )}
         </div>
       )}
 

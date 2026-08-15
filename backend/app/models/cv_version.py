@@ -19,6 +19,10 @@ class CVVersion(Base):
     cv_summary = Column(Text, nullable=True)
     cv_skills = Column(Text, nullable=True)
     cv_experience = Column(Text, nullable=True)
+    cover_letter = Column(Text, nullable=True)
+    interview_questions = Column(Text, nullable=True)
+    improvement_suggestions = Column(Text, nullable=True)
+    ai_provider = Column(String(50), nullable=True)
 
     ats_score = Column(Integer, nullable=True)
     missing_keywords = Column(Text, nullable=True)

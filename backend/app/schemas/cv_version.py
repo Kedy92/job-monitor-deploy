@@ -9,6 +9,7 @@ class CVVersionCreate(BaseModel):
     application_id: int
     job_ad_text: str
     template_name: str = "modern"
+    candidate_profile: Optional[str] = None
 
 
 class CVVersionRead(BaseModel):
@@ -19,6 +20,10 @@ class CVVersionRead(BaseModel):
     cv_summary: Optional[str] = None
     cv_skills: Optional[str] = None
     cv_experience: Optional[str] = None
+    cover_letter: Optional[str] = None
+    interview_questions: Optional[str] = None
+    improvement_suggestions: Optional[str] = None
+    ai_provider: Optional[str] = None
     ats_score: Optional[int] = None
     missing_keywords: Optional[str] = None
     created_at: datetime

@@ -62,3 +62,51 @@ def test_monitor_crud_and_manual_run(client, auth_headers, monkeypatch):
 
     delete = client.delete(f"/monitors/{monitor_id}", headers=auth_headers)
     assert delete.status_code == 204
+
+
+def test_cv_builder_creates_application_package(client, auth_headers, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+
+    application = client.post(
+        "/applications/",
+        headers=auth_headers,
+        json={
+            "job_title": "Junior Python Developer",
+            "company": "Example AB",
+            "job_url": "https://example.com/jobs/python",
+        },
+    )
+    assert application.status_code == 200
+    application_id = application.json()["id"]
+
+    cv = client.post(
+        "/cv-versions/",
+        headers=auth_headers,
+        json={
+            "application_id": application_id,
+            "job_ad_text": (
+                "We need a junior developer with Python, FastAPI, React, SQL, "
+                "Docker, REST APIs, testing, and cloud deployment experience."
+            ),
+            "candidate_profile": (
+                "Junior developer who built a FastAPI and React project with "
+                "PostgreSQL, Docker, REST APIs, authentication, and AWS deployment."
+            ),
+            "template_name": "modern",
+        },
+    )
+    assert cv.status_code == 200
+    data = cv.json()
+    assert data["ai_provider"] == "fallback"
+    assert data["cover_letter"]
+    assert data["interview_questions"]
+    assert data["improvement_suggestions"]
+    assert data["ats_score"] >= 50
+
+    history = client.get(
+        f"/cv-versions/application/{application_id}",
+        headers=auth_headers,
+    )
+    assert history.status_code == 200
+    assert history.json()[0]["id"] == data["id"]
