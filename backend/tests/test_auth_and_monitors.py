@@ -102,6 +102,9 @@ def test_cv_builder_creates_application_package(client, auth_headers, monkeypatc
     assert data["cover_letter"]
     assert data["interview_questions"]
     assert data["improvement_suggestions"]
+    assert data["matched_keywords"]
+    assert data["profile_gaps"]
+    assert data["honesty_warnings"]
     assert data["ats_score"] >= 50
 
     history = client.get(

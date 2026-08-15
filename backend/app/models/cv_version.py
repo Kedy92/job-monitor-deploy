@@ -22,6 +22,9 @@ class CVVersion(Base):
     cover_letter = Column(Text, nullable=True)
     interview_questions = Column(Text, nullable=True)
     improvement_suggestions = Column(Text, nullable=True)
+    matched_keywords = Column(Text, nullable=True)
+    profile_gaps = Column(Text, nullable=True)
+    honesty_warnings = Column(Text, nullable=True)
     ai_provider = Column(String(50), nullable=True)
 
     ats_score = Column(Integer, nullable=True)

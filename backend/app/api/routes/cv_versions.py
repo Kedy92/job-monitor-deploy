@@ -32,6 +32,9 @@ CV_PACKAGE_SCHEMA = {
         "cover_letter": {"type": "string"},
         "interview_questions": {"type": "string"},
         "improvement_suggestions": {"type": "string"},
+        "matched_keywords": {"type": "string"},
+        "profile_gaps": {"type": "string"},
+        "honesty_warnings": {"type": "string"},
         "ats_score": {"type": "integer", "minimum": 0, "maximum": 100},
         "missing_keywords": {"type": "string"},
     },
@@ -42,6 +45,9 @@ CV_PACKAGE_SCHEMA = {
         "cover_letter",
         "interview_questions",
         "improvement_suggestions",
+        "matched_keywords",
+        "profile_gaps",
+        "honesty_warnings",
         "ats_score",
         "missing_keywords",
     ],
@@ -56,6 +62,9 @@ def _normalize_ai_result(data: dict[str, Any], provider: str) -> dict:
         "cover_letter": str(data.get("cover_letter", "")).strip(),
         "interview_questions": str(data.get("interview_questions", "")).strip(),
         "improvement_suggestions": str(data.get("improvement_suggestions", "")).strip(),
+        "matched_keywords": str(data.get("matched_keywords", "")).strip(),
+        "profile_gaps": str(data.get("profile_gaps", "")).strip(),
+        "honesty_warnings": str(data.get("honesty_warnings", "")).strip(),
         "ats_score": max(0, min(100, int(data.get("ats_score", 50)))),
         "missing_keywords": str(data.get("missing_keywords", "")).strip(),
         "provider": provider,
@@ -95,6 +104,9 @@ Rules:
 - "cover_letter" must be 2-4 short paragraphs.
 - "interview_questions" must be 6 practical questions, one per line.
 - "improvement_suggestions" must be 4-6 concrete actions, one per line.
+- "matched_keywords" must be a comma-separated list of job-ad keywords clearly supported by the candidate profile.
+- "profile_gaps" must be 3-6 missing or weak areas, one per line.
+- "honesty_warnings" must flag any place where the CV should avoid overclaiming. If there are no major risks, explain that the content stays within the profile.
 - "missing_keywords" must be a comma-separated list of important job-ad keywords not strongly covered by the candidate profile.
 - Return only valid JSON matching the requested schema."""
 
@@ -282,6 +294,15 @@ def _fallback_generate(job_ad_text: str, job_title: str, company: str, candidate
             "Strengthen any missing database, cloud, or testing keywords before applying.",
         ]
     )
+    profile_gaps = "\n".join(
+        [
+            f"Show a concrete example for {kw}." for kw in missing[:5]
+        ]
+    ) or "No major gaps detected from the configured keyword set."
+    honesty_warnings = (
+        "Keep the wording at junior/full-stack project level unless you can show "
+        "professional production experience for every claimed skill."
+    )
 
     return {
         "summary": summary,
@@ -290,6 +311,9 @@ def _fallback_generate(job_ad_text: str, job_title: str, company: str, candidate
         "cover_letter": cover_letter,
         "interview_questions": questions,
         "improvement_suggestions": suggestions,
+        "matched_keywords": ", ".join(candidate_matches[:12]),
+        "profile_gaps": profile_gaps,
+        "honesty_warnings": honesty_warnings,
         "ats_score": ats_score,
         "missing_keywords": ", ".join(missing[:10]),
         "provider": "fallback",
@@ -337,6 +361,9 @@ def create_cv_version(
         cover_letter=result["cover_letter"],
         interview_questions=result["interview_questions"],
         improvement_suggestions=result["improvement_suggestions"],
+        matched_keywords=result["matched_keywords"],
+        profile_gaps=result["profile_gaps"],
+        honesty_warnings=result["honesty_warnings"],
         ai_provider=result["provider"],
         ats_score=result["ats_score"],
         missing_keywords=result["missing_keywords"],

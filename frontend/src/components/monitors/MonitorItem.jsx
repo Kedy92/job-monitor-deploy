@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Trash2, Tag, ExternalLink, Pencil, Check, X, History, Play } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Trash2, Tag, ExternalLink, Pencil, Check, X, History, Play, Briefcase, FileText } from "lucide-react";
+import { createApplication } from "../../api/applications";
 import { getMonitorRuns, runMonitorNow } from "../../api/monitors";
 
 const MONITOR_TYPES = [
@@ -36,11 +38,14 @@ function timeAgo(isoString) {
 }
 
 export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showRuns, setShowRuns] = useState(false);
   const [runs, setRuns] = useState(null);
   const [running, setRunning] = useState(false);
+  const [creatingApplication, setCreatingApplication] = useState(false);
+  const [applicationMessage, setApplicationMessage] = useState(null);
 
   const [name, setName] = useState(monitor.name);
   const [targetUrl, setTargetUrl] = useState(monitor.target_url);
@@ -70,6 +75,27 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
       setShowRuns(true);
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function handleCreateApplication(openCvBuilder = false) {
+    setCreatingApplication(true);
+    setApplicationMessage(null);
+    try {
+      const created = await createApplication({
+        job_title: monitor.name,
+        company: siteName(monitor.target_url),
+        job_url: monitor.target_url,
+        notes: `Created from monitor: ${monitor.name}`,
+      });
+      setApplicationMessage("Application created");
+      if (openCvBuilder) {
+        navigate(`/app/cv-builder/${created.id}`);
+      }
+    } catch (err) {
+      setApplicationMessage(err?.message || "Failed to create application");
+    } finally {
+      setCreatingApplication(false);
     }
   }
 
@@ -237,6 +263,22 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
             <Play size={14} className={running ? "animate-pulse" : ""} />
           </button>
           <button
+            onClick={() => handleCreateApplication(false)}
+            disabled={creatingApplication}
+            className="text-slate-400 hover:text-blue-600 transition-colors p-1.5 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+            title="Create application from monitor"
+          >
+            <Briefcase size={14} />
+          </button>
+          <button
+            onClick={() => handleCreateApplication(true)}
+            disabled={creatingApplication}
+            className="text-slate-400 hover:text-indigo-600 transition-colors p-1.5 rounded-lg hover:bg-indigo-50 disabled:opacity-50"
+            title="Create application and open CV Builder"
+          >
+            <FileText size={14} />
+          </button>
+          <button
             onClick={handleToggleRuns}
             className="text-slate-400 hover:text-indigo-600 transition-colors p-1.5 rounded-lg hover:bg-indigo-50"
             title="Run history"
@@ -268,6 +310,12 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
           </button>
         </div>
       </div>
+
+      {applicationMessage && (
+        <div className="border-t border-slate-100 bg-blue-50 px-4 py-2 text-xs text-blue-700">
+          {applicationMessage}
+        </div>
+      )}
 
       {/* Run history panel */}
       {showRuns && (

@@ -44,6 +44,12 @@ def generate_cv_pdf(cv):
     write_block("Summary", cv.cv_summary)
     write_block("Skills", cv.cv_skills)
     write_block("Experience", cv.cv_experience)
+    if getattr(cv, "matched_keywords", None):
+        write_block("Matched Keywords", cv.matched_keywords)
+    if getattr(cv, "profile_gaps", None):
+        write_block("Profile Gaps", cv.profile_gaps)
+    if getattr(cv, "honesty_warnings", None):
+        write_block("Honesty Warnings", cv.honesty_warnings)
     if getattr(cv, "cover_letter", None):
         write_block("Cover Letter Draft", cv.cover_letter)
     if getattr(cv, "interview_questions", None):

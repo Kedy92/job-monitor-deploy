@@ -4,7 +4,7 @@ import MonitorForm from "../components/monitors/MonitorForm";
 import MonitorList from "../components/monitors/MonitorList";
 import ErrorBanner from "../components/ui/ErrorBanner";
 import { LoadingLine, SkeletonCard } from "../components/ui/Loading";
-import { getApplicationStats } from "../api/applications";
+import { createApplication, getApplicationStats } from "../api/applications";
 import { getMonitorRuns } from "../api/monitors";
 import { useMonitors } from "../hooks/useMonitors";
 
@@ -41,6 +41,8 @@ export default function DashboardPage() {
   } = useMonitors();
   const [applicationStats, setApplicationStats] = useState(null);
   const [latestRuns, setLatestRuns] = useState([]);
+  const [creatingDemo, setCreatingDemo] = useState(false);
+  const [demoMessage, setDemoMessage] = useState(null);
 
   useEffect(() => {
     getApplicationStats().then(setApplicationStats).catch(() => {});
@@ -66,9 +68,39 @@ export default function DashboardPage() {
     return { active, latest };
   }, [monitors, latestRuns]);
 
+  async function handleCreateDemoData() {
+    setCreatingDemo(true);
+    setDemoMessage(null);
+    try {
+      const demoMonitor = await addMonitor({
+        name: "Junior Python Developer",
+        target_url: "https://example.com",
+        monitor_type: "job",
+        interval_minutes: 10,
+        keywords: "Python, FastAPI, React, SQL, Docker, REST API, AWS",
+        match_threshold: 50,
+        active: true,
+      });
+      await createApplication({
+        job_title: "Junior Python Developer",
+        company: "AI-Sweden Demo",
+        job_url: demoMonitor.target_url,
+        notes: "Demo application created from Job Monitor sample data.",
+        applied_at: new Date().toISOString().slice(0, 10),
+      });
+      const stats = await getApplicationStats();
+      setApplicationStats(stats);
+      setDemoMessage("Demo monitor and application created.");
+    } catch (err) {
+      setDemoMessage(err?.message || "Failed to create demo data.");
+    } finally {
+      setCreatingDemo(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <header>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-indigo-100 rounded-lg">
             <Radio size={22} className="text-indigo-600" />
@@ -80,6 +112,15 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={handleCreateDemoData}
+          disabled={creatingDemo}
+          className="btn-secondary shrink-0"
+        >
+          <Sparkles size={16} />
+          {creatingDemo ? "Creating demo..." : "Create demo data"}
+        </button>
       </header>
 
       <ErrorBanner
@@ -87,6 +128,12 @@ export default function DashboardPage() {
         message={error}
         onClose={() => setError(null)}
       />
+
+      {demoMessage && (
+        <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          {demoMessage}
+        </div>
+      )}
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard

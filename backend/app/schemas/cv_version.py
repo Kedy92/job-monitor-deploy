@@ -23,6 +23,9 @@ class CVVersionRead(BaseModel):
     cover_letter: Optional[str] = None
     interview_questions: Optional[str] = None
     improvement_suggestions: Optional[str] = None
+    matched_keywords: Optional[str] = None
+    profile_gaps: Optional[str] = None
+    honesty_warnings: Optional[str] = None
     ai_provider: Optional[str] = None
     ats_score: Optional[int] = None
     missing_keywords: Optional[str] = None

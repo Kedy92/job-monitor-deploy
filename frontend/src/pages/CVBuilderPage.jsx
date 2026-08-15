@@ -106,6 +106,9 @@ function CVCard({ cv, defaultOpen = false }) {
             </div>
           </div>
           <TextBlock title="Experience">{cv.cv_experience}</TextBlock>
+          <TextBlock title="Matched Keywords">{cv.matched_keywords}</TextBlock>
+          <TextBlock title="Profile Gaps">{cv.profile_gaps}</TextBlock>
+          <TextBlock title="Honesty Warnings">{cv.honesty_warnings}</TextBlock>
           <TextBlock title="Cover Letter Draft">{cv.cover_letter}</TextBlock>
           <TextBlock title="Interview Prep Questions">{cv.interview_questions}</TextBlock>
           <TextBlock title="Improvement Suggestions">{cv.improvement_suggestions}</TextBlock>
@@ -321,6 +324,9 @@ export default function CVBuilderPage() {
               </div>
             </div>
             <TextBlock title="Experience" className="md:col-span-2">{cvResult.cv_experience}</TextBlock>
+            <TextBlock title="Matched Keywords">{cvResult.matched_keywords}</TextBlock>
+            <TextBlock title="Profile Gaps">{cvResult.profile_gaps}</TextBlock>
+            <TextBlock title="Honesty Warnings" className="md:col-span-2">{cvResult.honesty_warnings}</TextBlock>
             <TextBlock title="Cover Letter Draft" className="md:col-span-2">{cvResult.cover_letter}</TextBlock>
             <TextBlock title="Interview Prep Questions">{cvResult.interview_questions}</TextBlock>
             <TextBlock title="Improvement Suggestions">{cvResult.improvement_suggestions}</TextBlock>
