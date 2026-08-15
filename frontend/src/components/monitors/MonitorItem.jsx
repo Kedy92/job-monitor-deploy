@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2, Tag, ExternalLink, Pencil, Check, X, History, Play, Briefcase, FileText } from "lucide-react";
+import { Trash2, Tag, ExternalLink, Pencil, Check, X, History, Play, Briefcase, FileText, Mail } from "lucide-react";
 import { createApplication } from "../../api/applications";
-import { getMonitorRuns, runMonitorNow } from "../../api/monitors";
+import { getMonitorRuns, runMonitorNow, sendTestNotification } from "../../api/monitors";
 
 const MONITOR_TYPES = [
   { value: "job", label: "Job" },
@@ -46,6 +46,8 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
   const [running, setRunning] = useState(false);
   const [creatingApplication, setCreatingApplication] = useState(false);
   const [applicationMessage, setApplicationMessage] = useState(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState(null);
 
   const [name, setName] = useState(monitor.name);
   const [targetUrl, setTargetUrl] = useState(monitor.target_url);
@@ -96,6 +98,25 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
       setApplicationMessage(err?.message || "Failed to create application");
     } finally {
       setCreatingApplication(false);
+    }
+  }
+
+  async function handleSendTestNotification() {
+    setSendingEmail(true);
+    setNotificationMessage(null);
+    try {
+      const result = await sendTestNotification(monitor.id);
+      setNotificationMessage({
+        type: result.ok ? "success" : "error",
+        text: result.message,
+      });
+    } catch (err) {
+      setNotificationMessage({
+        type: "error",
+        text: err?.message || "Failed to send test email",
+      });
+    } finally {
+      setSendingEmail(false);
     }
   }
 
@@ -279,6 +300,14 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
             <FileText size={14} />
           </button>
           <button
+            onClick={handleSendTestNotification}
+            disabled={sendingEmail}
+            className="text-slate-400 hover:text-emerald-600 transition-colors p-1.5 rounded-lg hover:bg-emerald-50 disabled:opacity-50"
+            title="Send test email notification"
+          >
+            <Mail size={14} className={sendingEmail ? "animate-pulse" : ""} />
+          </button>
+          <button
             onClick={handleToggleRuns}
             className="text-slate-400 hover:text-indigo-600 transition-colors p-1.5 rounded-lg hover:bg-indigo-50"
             title="Run history"
@@ -314,6 +343,16 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
       {applicationMessage && (
         <div className="border-t border-slate-100 bg-blue-50 px-4 py-2 text-xs text-blue-700">
           {applicationMessage}
+        </div>
+      )}
+
+      {notificationMessage && (
+        <div className={`border-t border-slate-100 px-4 py-2 text-xs ${
+          notificationMessage.type === "success"
+            ? "bg-emerald-50 text-emerald-700"
+            : "bg-red-50 text-red-700"
+        }`}>
+          {notificationMessage.text}
         </div>
       )}
 

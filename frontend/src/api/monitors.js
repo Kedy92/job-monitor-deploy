@@ -23,3 +23,7 @@ export function getMonitorRuns(id) {
 export function runMonitorNow(id) {
   return api.post(`/monitors/${id}/run`);
 }
+
+export function sendTestNotification(id) {
+  return api.post(`/monitors/${id}/send-test-notification`);
+}

@@ -48,3 +48,9 @@ class MonitorRunRead(BaseModel):
     status: str
     message: Optional[str] = None
     result_hash: Optional[str] = None
+
+
+class TestNotificationRead(BaseModel):
+    ok: bool
+    message: str
+    provider_message_id: Optional[str] = None

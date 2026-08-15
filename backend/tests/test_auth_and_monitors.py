@@ -60,6 +60,14 @@ def test_monitor_crud_and_manual_run(client, auth_headers, monkeypatch):
     assert runs.status_code == 200
     assert len(runs.json()) == 1
 
+    test_email = client.post(
+        f"/monitors/{monitor_id}/send-test-notification",
+        headers=auth_headers,
+    )
+    assert test_email.status_code == 200
+    assert test_email.json()["ok"] is False
+    assert "not configured" in test_email.json()["message"]
+
     delete = client.delete(f"/monitors/{monitor_id}", headers=auth_headers)
     assert delete.status_code == 204
 

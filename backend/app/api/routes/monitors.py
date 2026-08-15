@@ -4,7 +4,14 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.models.monitor import Monitor
 from app.models.monitor_run import MonitorRun
-from app.schemas.monitor import MonitorCreate, MonitorRead, MonitorRunRead, MonitorUpdate
+from app.notifications.service import NotificationService
+from app.schemas.monitor import (
+    MonitorCreate,
+    MonitorRead,
+    MonitorRunRead,
+    MonitorUpdate,
+    TestNotificationRead,
+)
 from app.schemas.user import UserRead
 from app.services.monitors import (
     create_monitor,
@@ -107,6 +114,58 @@ def run_monitor_now(
     db.commit()
     db.refresh(run)
     return run
+
+
+@router.post("/{monitor_id}/send-test-notification", response_model=TestNotificationRead)
+def send_test_notification(
+    monitor_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserRead = Depends(get_current_user),
+):
+    monitor = db.query(Monitor).filter(
+        Monitor.id == monitor_id, Monitor.user_id == current_user.id
+    ).first()
+    if not monitor:
+        raise HTTPException(status_code=404, detail="Monitor not found")
+
+    keywords = [k.strip() for k in (monitor.keywords or "").split(",") if k.strip()]
+    summary = (
+        "Demo notification | "
+        f"Score: {max(monitor.match_threshold, 80)}% | "
+        f"Matched: {', '.join(keywords[:6]) or 'demo keyword'} | "
+        "Triggered manually for presentation"
+    )
+
+    try:
+        result = NotificationService().send_match_email_direct(
+            to_email=current_user.email,
+            monitor_name=f"{monitor.name} (test)",
+            target_url=monitor.target_url,
+            match_summary=summary,
+        )
+    except RuntimeError as exc:
+        return TestNotificationRead(
+            ok=False,
+            message=f"Email provider is not configured: {exc}",
+        )
+    except Exception as exc:
+        return TestNotificationRead(
+            ok=False,
+            message=f"Failed to send test email: {exc}",
+        )
+
+    if result and result.ok:
+        return TestNotificationRead(
+            ok=True,
+            message=f"Test email sent to {current_user.email}",
+            provider_message_id=result.provider_message_id,
+        )
+
+    return TestNotificationRead(
+        ok=False,
+        message=f"Email provider returned an error: {result.error if result else 'unknown error'}",
+        provider_message_id=result.provider_message_id if result else None,
+    )
 
 
 @router.delete("/{monitor_id}", status_code=status.HTTP_204_NO_CONTENT)
