@@ -170,6 +170,7 @@ export default function ApplicationsPage() {
   const [refreshing, setRefreshing]         = useState(false);
   const [rowBusyId, setRowBusyId]           = useState(null);
   const [editingId, setEditingId]           = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const bannerTimeoutRef = useRef(null);
 
   const safeSetBanner = useCallback((next) => {
@@ -285,7 +286,6 @@ export default function ApplicationsPage() {
 
   async function handleDelete(id) {
     if (rowBusyId) return;
-    if (!confirm("Delete this application?")) return;
     setRowBusyId(id);
     const prevItems = items;
     setItems((prev) => prev.filter((x) => x.id !== id));
@@ -298,6 +298,7 @@ export default function ApplicationsPage() {
       safeSetBanner({ type: "error", title: "Failed to delete", message: e?.message || "Please try again." });
     } finally {
       setRowBusyId(null);
+      setConfirmDeleteId(null);
     }
   }
 
@@ -414,6 +415,7 @@ export default function ApplicationsPage() {
                 const url    = (a.job_url || "").trim();
                 const status = String(a.status || "APPLIED");
                 const isEditing = editingId === a.id;
+                const isConfirmingDelete = confirmDeleteId === a.id;
 
                 return isEditing ? (
                   <EditRow
@@ -476,25 +478,57 @@ export default function ApplicationsPage() {
                       <div className="inline-flex items-center gap-2">
                         <button
                           onClick={() => setEditingId(a.id)}
+                          disabled={isConfirmingDelete}
                           className="text-slate-400 hover:text-indigo-600 transition-colors p-1.5 rounded-lg hover:bg-indigo-50"
                           title="Edit application"
                         >
                           <Pencil size={13} />
                         </button>
-                        <Link to={`/app/cv-builder/${a.id}`}>
+                        <Link to={`/app/cv-builder/${a.id}`} className={isConfirmingDelete ? "pointer-events-none opacity-50" : ""}>
                           <button className="btn-secondary py-1 px-2 text-xs">
                             <FileText size={13} /> CV
                           </button>
                         </Link>
                         {url && (
-                          <a href={url} target="_blank" rel="noreferrer" className="btn-secondary py-1 px-2 text-xs">
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={cn("btn-secondary py-1 px-2 text-xs", isConfirmingDelete && "pointer-events-none opacity-50")}
+                          >
                             <ExternalLink size={13} />
                           </a>
                         )}
-                        <button type="button" onClick={() => handleDelete(a.id)}
-                          disabled={busy} className="btn-danger py-1 px-2 text-xs">
-                          <Trash2 size={13} />
-                        </button>
+                        {isConfirmingDelete ? (
+                          <div className="inline-flex items-center gap-1 rounded-lg border border-red-100 bg-red-50 px-2 py-1">
+                            <span className="text-xs font-medium text-red-700">Delete?</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(a.id)}
+                              disabled={busy}
+                              className="rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                            >
+                              Yes
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              disabled={busy}
+                              className="rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-white"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(a.id)}
+                            disabled={busy}
+                            className="btn-danger py-1 px-2 text-xs"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
