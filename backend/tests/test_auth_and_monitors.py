@@ -110,3 +110,7 @@ def test_cv_builder_creates_application_package(client, auth_headers, monkeypatc
     )
     assert history.status_code == 200
     assert history.json()[0]["id"] == data["id"]
+
+    delete = client.delete(f"/applications/{application_id}", headers=auth_headers)
+    assert delete.status_code == 200
+    assert delete.json() == {"ok": True}

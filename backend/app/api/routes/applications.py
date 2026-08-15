@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user
 from app.models.application import Application
+from app.models.cv_version import CVVersion
 from app.models.monitor import Monitor
 from app.schemas.application import (
     ApplicationCreate,
@@ -174,6 +175,10 @@ def delete_application(
     current_user=Depends(get_current_user),
 ):
     row = _get_or_404(db, application_id, current_user.id)
+    db.query(CVVersion).filter(
+        CVVersion.application_id == application_id,
+        CVVersion.user_id == current_user.id,
+    ).delete(synchronize_session=False)
     db.delete(row)
     db.commit()
     return {"ok": True}
