@@ -1,7 +1,7 @@
 """add ai cv package fields
 
 Revision ID: f4a9b8c7d6e5
-Revises: d91230a8c3c6
+Revises: c1d2e3f4a5b6
 Create Date: 2026-08-15 00:00:00.000000
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "f4a9b8c7d6e5"
-down_revision = "d91230a8c3c6"
+down_revision = "c1d2e3f4a5b6"
 branch_labels = None
 depends_on = None
 
