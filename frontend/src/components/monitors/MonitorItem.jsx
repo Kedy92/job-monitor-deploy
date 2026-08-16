@@ -185,27 +185,35 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
             value={keywords}
             onChange={(e) => setKeywords(e.target.value)}
           />
-          <div className="flex items-center gap-2">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-600">
+              Check interval
+            </label>
             <input
               type="number"
               min="1"
               className="input"
-              placeholder="Interval (min)"
+              placeholder="10"
               value={intervalMinutes}
               onChange={(e) => setIntervalMinutes(e.target.value)}
             />
+            <p className="text-xs text-slate-500">
+              Runs automatically every {intervalMinutes || 0} minutes while active.
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-slate-600 whitespace-nowrap">Threshold:</label>
-            <input
-              type="number"
-              min="1"
-              max="100"
-              className="input"
-              value={matchThreshold}
-              onChange={(e) => setMatchThreshold(e.target.value)}
-            />
-            <span className="text-sm text-slate-500">%</span>
+          <div className="space-y-1">
+            <label className="text-sm text-slate-600 whitespace-nowrap">Match threshold</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max="100"
+                className="input"
+                value={matchThreshold}
+                onChange={(e) => setMatchThreshold(e.target.value)}
+              />
+              <span className="text-sm text-slate-500">%</span>
+            </div>
           </div>
         </div>
 

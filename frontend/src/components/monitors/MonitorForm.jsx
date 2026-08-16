@@ -70,31 +70,39 @@ export default function MonitorForm({ onCreate }) {
           onChange={(e) => setKeywords(e.target.value)}
         />
 
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            min="1"
-            className="input"
-            placeholder="Interval (minutes)"
-            value={intervalMinutes}
-            onChange={(e) => setIntervalMinutes(e.target.value)}
-          />
-        </div>
-
-        <div className="flex items-center gap-3">
-          <label className="text-sm text-slate-600 whitespace-nowrap">
-            Match threshold:
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-slate-600">
+            Check interval
           </label>
           <input
             type="number"
             min="1"
-            max="100"
             className="input"
-            placeholder="60"
-            value={matchThreshold}
-            onChange={(e) => setMatchThreshold(e.target.value)}
+            placeholder="10"
+            value={intervalMinutes}
+            onChange={(e) => setIntervalMinutes(e.target.value)}
           />
-          <span className="text-sm text-slate-500">%</span>
+          <p className="text-xs text-slate-500">
+            Runs automatically every {intervalMinutes || 0} minutes while active.
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm text-slate-600 whitespace-nowrap">
+            Match threshold
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="1"
+              max="100"
+              className="input"
+              placeholder="60"
+              value={matchThreshold}
+              onChange={(e) => setMatchThreshold(e.target.value)}
+            />
+            <span className="text-sm text-slate-500">%</span>
+          </div>
         </div>
       </div>
 
