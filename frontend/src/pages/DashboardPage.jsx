@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, Briefcase, CheckCircle2, Radio, Sparkles } from "lucide-react";
 import MonitorForm from "../components/monitors/MonitorForm";
 import MonitorList from "../components/monitors/MonitorList";
@@ -44,27 +44,32 @@ export default function DashboardPage() {
   const [creatingDemo, setCreatingDemo] = useState(false);
   const [demoMessage, setDemoMessage] = useState(null);
 
+  const refreshLatestRuns = useCallback(async () => {
+    if (!monitors.length) {
+      setLatestRuns([]);
+      return;
+    }
+
+    const groups = await Promise.all(
+      monitors.slice(0, 6).map((monitor) => getMonitorRuns(monitor.id).catch(() => []))
+    );
+    const runs = groups
+      .flat()
+      .sort((a, b) => new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime());
+    setLatestRuns(runs.slice(0, 3));
+  }, [monitors]);
+
   useEffect(() => {
     getApplicationStats().then(setApplicationStats).catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!monitors.length) {
-      return;
-    }
-
-    Promise.all(monitors.slice(0, 6).map((monitor) => getMonitorRuns(monitor.id).catch(() => [])))
-      .then((groups) => {
-        const runs = groups
-          .flat()
-          .sort((a, b) => new Date(b.checked_at).getTime() - new Date(a.checked_at).getTime());
-        setLatestRuns(runs.slice(0, 3));
-      });
-  }, [monitors]);
+    refreshLatestRuns();
+  }, [refreshLatestRuns]);
 
   const monitorStats = useMemo(() => {
     const active = monitors.filter((m) => m.active).length;
-    const latest = monitors.length ? latestRuns[0]?.status || "none" : "none";
+    const latest = latestRuns[0]?.status || (monitors.length ? "no runs yet" : "none");
     return { active, latest };
   }, [monitors, latestRuns]);
 
@@ -187,6 +192,7 @@ export default function DashboardPage() {
             onDelete={removeMonitor}
             onToggle={toggleMonitor}
             onEdit={editMonitor}
+            onRunComplete={refreshLatestRuns}
           />
         )}
       </section>

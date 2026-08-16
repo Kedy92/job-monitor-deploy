@@ -37,7 +37,7 @@ function timeAgo(isoString) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
+export default function MonitorItem({ monitor, onDelete, onToggle, onEdit, onRunComplete }) {
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -75,6 +75,7 @@ export default function MonitorItem({ monitor, onDelete, onToggle, onEdit }) {
       const run = await runMonitorNow(monitor.id);
       setRuns((prev) => [run, ...(prev || [])].slice(0, 10));
       setShowRuns(true);
+      await onRunComplete?.();
     } finally {
       setRunning(false);
     }
