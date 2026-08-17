@@ -67,6 +67,15 @@ export default function DashboardPage() {
     refreshLatestRuns();
   }, [refreshLatestRuns]);
 
+  useEffect(() => {
+    const latestRunsRefreshMs = 15000;
+    const intervalId = window.setInterval(() => {
+      refreshLatestRuns();
+    }, latestRunsRefreshMs);
+
+    return () => window.clearInterval(intervalId);
+  }, [refreshLatestRuns]);
+
   const monitorStats = useMemo(() => {
     const active = monitors.filter((m) => m.active).length;
     const latest = latestRuns[0]?.status || (monitors.length ? "no runs yet" : "none");
