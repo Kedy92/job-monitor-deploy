@@ -44,6 +44,11 @@ export default function DashboardPage() {
   const [creatingDemo, setCreatingDemo] = useState(false);
   const [demoMessage, setDemoMessage] = useState(null);
 
+  const refreshApplicationStats = useCallback(async () => {
+    const stats = await getApplicationStats();
+    setApplicationStats(stats);
+  }, []);
+
   const refreshLatestRuns = useCallback(async () => {
     if (!monitors.length) {
       setLatestRuns([]);
@@ -60,8 +65,34 @@ export default function DashboardPage() {
   }, [monitors]);
 
   useEffect(() => {
-    getApplicationStats().then(setApplicationStats).catch(() => {});
-  }, []);
+    refreshApplicationStats().catch(() => {});
+  }, [refreshApplicationStats]);
+
+  useEffect(() => {
+    const applicationStatsRefreshMs = 15000;
+    const intervalId = window.setInterval(() => {
+      refreshApplicationStats().catch(() => {});
+    }, applicationStatsRefreshMs);
+
+    const handleFocus = () => {
+      refreshApplicationStats().catch(() => {});
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        refreshApplicationStats().catch(() => {});
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshApplicationStats]);
 
   useEffect(() => {
     refreshLatestRuns();
@@ -102,8 +133,7 @@ export default function DashboardPage() {
         notes: "Demo application created from Job Monitor sample data.",
         applied_at: new Date().toISOString().slice(0, 10),
       });
-      const stats = await getApplicationStats();
-      setApplicationStats(stats);
+      await refreshApplicationStats();
       setDemoMessage("Demo monitor and application created.");
     } catch (err) {
       setDemoMessage(err?.message || "Failed to create demo data.");
