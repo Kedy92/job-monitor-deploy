@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
@@ -131,6 +131,9 @@ def create_application(
     current_user=Depends(get_current_user),
 ):
     data = payload.model_dump(exclude_none=True)
+
+    if "applied_at" not in data:
+        data["applied_at"] = date.today()
 
     # Auto-calculate match_score from job_url if not provided
     if "match_score" not in data and data.get("job_url"):

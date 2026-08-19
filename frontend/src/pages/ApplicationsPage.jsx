@@ -31,6 +31,15 @@ const PAGE_SIZE = 50;
 
 function cn(...classes) { return classes.filter(Boolean).join(" "); }
 
+function todayDateInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatDate(value) {
+  if (!value) return null;
+  return String(value).slice(0, 10);
+}
+
 function StatCard({ label, value, color = "indigo" }) {
   const colors = {
     indigo:  "border-indigo-100 bg-indigo-50 text-indigo-700",
@@ -160,7 +169,7 @@ export default function ApplicationsPage() {
   const [company, setCompany]       = useState("");
   const [jobUrl, setJobUrl]         = useState("");
   const [notes, setNotes]           = useState("");
-  const [appliedAt, setAppliedAt]   = useState("");
+  const [appliedAt, setAppliedAt]   = useState(todayDateInputValue);
   const [showForm, setShowForm]     = useState(false);
 
   // Table controls
@@ -234,10 +243,10 @@ export default function ApplicationsPage() {
         company,
         job_url: jobUrl.trim() || null,
         notes: notes.trim() || null,
-        applied_at: appliedAt || null,
+        applied_at: appliedAt || todayDateInputValue(),
       });
       setItems((prev) => [created, ...prev]);
-      setJobTitle(""); setCompany(""); setJobUrl(""); setNotes(""); setAppliedAt("");
+      setJobTitle(""); setCompany(""); setJobUrl(""); setNotes(""); setAppliedAt(todayDateInputValue());
       setShowForm(false);
       await loadStats();
       safeSetBanner({
@@ -348,7 +357,7 @@ export default function ApplicationsPage() {
             <input className="input md:col-span-2" placeholder="Job URL (optional — auto-scores on save)"
               value={jobUrl} onChange={(e) => setJobUrl(e.target.value)} disabled={creating} />
             <div className="space-y-1">
-              <label className="text-xs text-slate-500">Date applied (optional)</label>
+              <label className="text-xs text-slate-500">Date applied</label>
               <input type="date" className="input" value={appliedAt}
                 onChange={(e) => setAppliedAt(e.target.value)} disabled={creating} />
             </div>
@@ -468,10 +477,8 @@ export default function ApplicationsPage() {
                       )}
                     </td>
 
-                    <td className="px-6 py-4 text-slate-500 text-xs">
-                      {a.applied_at
-                        ? new Date(a.applied_at).toLocaleDateString()
-                        : <span className="text-slate-300">—</span>}
+                    <td className="px-6 py-4 text-slate-500 text-xs whitespace-nowrap">
+                      {formatDate(a.applied_at || a.created_at) || <span className="text-slate-300">—</span>}
                     </td>
 
                     <td className="px-6 py-4 text-right">
